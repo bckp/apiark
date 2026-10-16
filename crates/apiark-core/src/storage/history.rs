@@ -229,10 +229,7 @@ impl HistoryDb {
     }
 
     /// Insert a monitor result.
-    pub fn insert_monitor_result(
-        &self,
-        result: &MonitorResult,
-    ) -> Result<(), String> {
+    pub fn insert_monitor_result(&self, result: &MonitorResult) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {e}"))?;
         conn.execute(
             "INSERT INTO monitor_results (monitor_id, timestamp, total_requests, total_passed, total_failed, total_time_ms, status, error)

@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Write;
 
 use serde::{Deserialize, Serialize};
 
@@ -79,23 +79,16 @@ pub async fn import_app_state(zip_path: String) -> Result<ImportSummary, String>
     let _ = fs::create_dir_all(&apiark_dir);
 
     let file = fs::File::open(&zip_path).map_err(|e| format!("Failed to open import file: {e}"))?;
-    let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Invalid zip file: {e}"))?;
-
+    if file.metadata().map_err(|e| e.to_string())?.len() > apiark_core::backup::MAX_BACKUP_BYTES {
+        return Err("Compressed backup exceeds limit".into());
+    }
+    let entries = apiark_core::backup::read_backup(file)?;
     let mut files_restored = Vec::new();
     let mut history_entries: Option<String> = None;
-
-    for i in 0..archive.len() {
-        let mut entry = archive
-            .by_index(i)
-            .map_err(|e| format!("Zip entry error: {e}"))?;
-        let name = entry.name().to_string();
-
+    for (name, bytes) in entries {
         match name.as_str() {
             "settings.json" => {
-                let mut content = String::new();
-                entry
-                    .read_to_string(&mut content)
-                    .map_err(|e| format!("Failed to read settings from zip: {e}"))?;
+                let content = String::from_utf8(bytes).map_err(|e| e.to_string())?;
 
                 // Merge: parse both old and new, new values override old
                 let target = apiark_dir.join("settings.json");
@@ -110,19 +103,13 @@ pub async fn import_app_state(zip_path: String) -> Result<ImportSummary, String>
                 files_restored.push("settings.json".to_string());
             }
             "state.json" => {
-                let mut content = String::new();
-                entry
-                    .read_to_string(&mut content)
-                    .map_err(|e| format!("Failed to read state from zip: {e}"))?;
+                let content = String::from_utf8(bytes).map_err(|e| e.to_string())?;
                 fs::write(apiark_dir.join("state.json"), content)
                     .map_err(|e| format!("Failed to write state: {e}"))?;
                 files_restored.push("state.json".to_string());
             }
             "data.db" => {
-                let mut content = Vec::new();
-                entry
-                    .read_to_end(&mut content)
-                    .map_err(|e| format!("Failed to read history DB from zip: {e}"))?;
+                let content = bytes;
 
                 // Back up existing DB
                 let db_path = apiark_dir.join("data.db");

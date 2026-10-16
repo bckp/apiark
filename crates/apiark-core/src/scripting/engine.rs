@@ -20,6 +20,10 @@ pub fn execute_script(
     // Limit memory to 32MB and max stack size to 1MB
     rt.set_memory_limit(32 * 1024 * 1024);
     rt.set_max_stack_size(1024 * 1024);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    rt.set_interrupt_handler(Some(Box::new(move || {
+        std::time::Instant::now() >= deadline
+    })));
 
     let ctx = Context::full(&rt).map_err(|e| format!("Failed to create JS context: {e}"))?;
 
@@ -31,7 +35,7 @@ pub fn execute_script(
         ScriptPhase::PostResponse => "post_response",
     };
 
-    ctx.with(|ctx| {
+    let result = ctx.with(|ctx| {
         let globals = ctx.globals();
 
         // Inject context JSON and phase as globals
@@ -56,7 +60,11 @@ pub fn execute_script(
             .map_err(|e| format!("Failed to extract results: {e}"))?;
 
         parse_mutations(&result_json, &context)
-    })
+    });
+    if rt.is_job_pending() {
+        return Err("Async scripts and pending Promise jobs are unsupported".into());
+    }
+    result
 }
 
 /// Parse the __mutations JSON from JS back into a ScriptResult
@@ -143,6 +151,7 @@ fn parse_mutations(json: &str, original_ctx: &ScriptContext) -> Result<ScriptRes
     };
 
     Ok(ScriptResult {
+        visualizations: super::visualization::validate(raw.get("visualizations"))?,
         request,
         env_mutations,
         global_mutations,

@@ -5,9 +5,6 @@ use crate::models::response::{CookieData, ResponseData};
 /// Maximum response body size we'll load into memory: 10MB.
 const MAX_BODY_SIZE: u64 = 10 * 1024 * 1024;
 
-/// Truncation threshold: bodies above this are truncated in the UI.
-const TRUNCATE_THRESHOLD: usize = 1024 * 1024; // 1MB
-
 /// Parse a reqwest::Response into our ResponseData struct.
 pub async fn parse_response(
     response: reqwest::Response,
@@ -33,33 +30,13 @@ pub async fn parse_response(
         })
         .collect();
 
-    // Collect cookies from response.cookies() (parsed Set-Cookie headers)
-    let mut cookies: Vec<CookieData> = response
-        .cookies()
-        .map(|c| CookieData {
-            name: c.name().to_string(),
-            value: c.value().to_string(),
-            domain: c.domain().map(|d| d.to_string()),
-            path: c.path().map(|p| p.to_string()),
-            expires: None,
-            http_only: c.http_only(),
-            secure: c.secure(),
-        })
+    let cookies = response
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .filter_map(|h| h.to_str().ok())
+        .filter_map(|h| parse_set_cookie_header(h, response.url()))
         .collect();
-
-    // Also parse Set-Cookie headers directly as a fallback
-    // (reqwest's .cookies() may miss cookies from redirect responses)
-    if cookies.is_empty() {
-        for value in response.headers().get_all("set-cookie").iter() {
-            if let Ok(val) = value.to_str() {
-                if let Some(cookie) = parse_set_cookie_header(val, response.url()) {
-                    if !cookies.iter().any(|c| c.name == cookie.name) {
-                        cookies.push(cookie);
-                    }
-                }
-            }
-        }
-    }
 
     // Check content-length before downloading
     if let Some(len) = response.content_length() {
@@ -68,52 +45,21 @@ pub async fn parse_response(
         }
     }
 
-    // Read body with size limit
-    let bytes = response
-        .bytes()
+    // Enforce the cap while receiving chunked/unknown-length responses.
+    let mut response = response;
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
         .await
-        .map_err(|e| HttpEngineError::BodyDecodeError(e.to_string()))?;
-
-    if bytes.len() as u64 > MAX_BODY_SIZE {
-        return Err(HttpEngineError::ResponseTooLarge(MAX_BODY_SIZE));
+        .map_err(|e| HttpEngineError::BodyDecodeError(e.to_string()))?
+    {
+        if chunk.len() > MAX_BODY_SIZE as usize - bytes.len() {
+            return Err(HttpEngineError::ResponseTooLarge(MAX_BODY_SIZE));
+        }
+        bytes.extend_from_slice(&chunk);
     }
 
     let size_bytes = bytes.len() as u64;
-
-    // Check if we need to truncate
-    if bytes.len() > TRUNCATE_THRESHOLD {
-        // Save full body to temp file
-        let temp_path =
-            std::env::temp_dir().join(format!("apiark-response-{}", uuid::Uuid::new_v4()));
-
-        if let Err(e) = std::fs::write(&temp_path, &bytes) {
-            tracing::warn!("Failed to write response temp file: {e}");
-            // Fall through to return truncated body without temp path
-        }
-
-        let truncated_bytes = &bytes[..TRUNCATE_THRESHOLD];
-        let body = String::from_utf8(truncated_bytes.to_vec())
-            .unwrap_or_else(|_| format!("<binary data: {} bytes>", size_bytes));
-
-        let temp_path_str = if temp_path.exists() {
-            Some(temp_path.to_string_lossy().to_string())
-        } else {
-            None
-        };
-
-        return Ok(ResponseData {
-            status,
-            status_text,
-            headers,
-            cookies,
-            body,
-            time_ms: elapsed_ms,
-            size_bytes,
-            truncated: Some(true),
-            full_size: Some(size_bytes),
-            temp_path: temp_path_str,
-        });
-    }
 
     let body = String::from_utf8(bytes.to_vec()).unwrap_or_else(|_| {
         // For binary responses, show a placeholder
@@ -136,41 +82,54 @@ pub async fn parse_response(
 
 /// Parse a raw Set-Cookie header string into a CookieData.
 pub fn parse_set_cookie_header(header: &str, url: &url::Url) -> Option<CookieData> {
-    let parts: Vec<&str> = header.splitn(2, ';').collect();
-    let name_value = parts.first()?;
-    let (name, value) = name_value.split_once('=')?;
-    let name = name.trim().to_string();
-    if name.is_empty() {
+    let c = cookie::Cookie::parse(header).ok()?;
+    let host = url.host_str()?;
+    let domain = c
+        .domain()
+        .unwrap_or(host)
+        .trim_start_matches('.')
+        .to_ascii_lowercase();
+    let host_only = c.domain().is_none();
+    if domain.is_empty()
+        || (host != domain
+            && (host.parse::<std::net::IpAddr>().is_ok()
+                || !host.strip_suffix(&domain).is_some_and(|p| p.ends_with('.'))))
+    {
         return None;
     }
-    let value = value.trim().to_string();
-
-    let attrs = parts.get(1).unwrap_or(&"").to_lowercase();
-    let domain =
-        extract_cookie_attr(&attrs, "domain").or_else(|| url.host_str().map(|h| h.to_string()));
-    let path = extract_cookie_attr(&attrs, "path").or_else(|| Some("/".to_string()));
-    let http_only = attrs.contains("httponly");
-    let secure = attrs.contains("secure");
-
-    Some(CookieData {
-        name,
-        value,
-        domain,
-        path,
-        expires: extract_cookie_attr(&attrs, "expires"),
-        http_only,
-        secure,
-    })
-}
-
-fn extract_cookie_attr(attrs: &str, key: &str) -> Option<String> {
-    for part in attrs.split(';') {
-        let part = part.trim();
-        if let Some((k, v)) = part.split_once('=') {
-            if k.trim() == key {
-                return Some(v.trim().to_string());
-            }
-        }
+    if !host_only && psl::suffix_str(&domain) == Some(domain.as_str()) && domain != host {
+        return None;
     }
-    None
+    // A public-suffix Domain exactly equal to the origin is treated as host-only.
+    let host_only = host_only || psl::suffix_str(&domain) == Some(domain.as_str());
+    let default_path = url
+        .path()
+        .rsplit_once('/')
+        .map(|(p, _)| if p.is_empty() { "/" } else { p })
+        .unwrap_or("/");
+    let path = c
+        .path()
+        .filter(|p| p.starts_with('/'))
+        .unwrap_or(default_path);
+    let expires = if let Some(age) = c.max_age() {
+        Some(
+            chrono::Utc::now()
+                .timestamp()
+                .saturating_add(age.whole_seconds().max(-1)),
+        )
+    } else {
+        c.expires_datetime().map(|t| t.unix_timestamp())
+    };
+    Some(CookieData {
+        name: c.name().to_string(),
+        value: c.value().to_string(),
+        domain: Some(domain),
+        host_only,
+        path: Some(path.to_string()),
+        expires: expires
+            .and_then(|t| chrono::DateTime::from_timestamp(t, 0))
+            .map(|t| t.to_rfc3339()),
+        http_only: c.http_only().unwrap_or(false),
+        secure: c.secure().unwrap_or(false),
+    })
 }

@@ -20,8 +20,7 @@ pub fn build_client(params: &SendRequestParams) -> Result<Client, HttpEngineErro
             reqwest::redirect::Policy::limited(10)
         } else {
             reqwest::redirect::Policy::none()
-        })
-        .cookie_store(true);
+        });
 
     if !params.verify_ssl {
         builder = builder.danger_accept_invalid_certs(true);
@@ -128,6 +127,12 @@ pub fn build_request(
     client: &Client,
     params: &SendRequestParams,
 ) -> Result<RequestBuilder, HttpEngineError> {
+    if matches!(
+        params.auth,
+        Some(AuthConfig::Oauth2 { .. } | AuthConfig::Digest { .. } | AuthConfig::Ntlm { .. })
+    ) {
+        return Err(HttpEngineError::RequestError("This authentication requires an explicit token or an unsupported challenge runtime. Use Bearer/Basic/API key; OAuth must be resolved before sending.".into()));
+    }
     let url = build_url_with_params(&params.url, &params.params, &params.auth)?;
     let method = params.method.to_reqwest();
 

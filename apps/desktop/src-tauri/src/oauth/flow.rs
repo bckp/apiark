@@ -391,6 +391,10 @@ async fn implicit_flow(
 
     let _ = shutdown_tx.send(());
 
+    if callback_result.state.as_deref() != Some(&state) {
+        return Err("OAuth state mismatch — possible CSRF attack".to_string());
+    }
+
     let access_token = callback_result
         .access_token
         .ok_or("No access token received from implicit flow")?;
@@ -476,4 +480,29 @@ fn extract_port(callback_url: &str) -> Result<u16, String> {
         .map_err(|e| format!("Invalid callback URL: {e}"))?
         .port()
         .ok_or_else(|| "Callback URL must specify a port".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[tokio::test]
+    async fn implicit_accepts_only_matching_state() {
+        for mode in ["matching", "missing", "wrong"] {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let callback = format!("http://127.0.0.1:{}/callback",listener.local_addr().unwrap().port());
+            drop(listener);
+            let callback_for_browser = callback.clone();
+            let result=implicit_flow("https://example.test/auth","synthetic-client","",&callback,&move |auth_url| {
+                let url=url::Url::parse(auth_url).unwrap();
+                let expected=url.query_pairs().find(|(k,_)|k=="state").unwrap().1.to_string();
+                let mut params=vec![("access_token","synthetic-token".to_string())];
+                if mode!="missing" {params.push(("state",if mode=="matching" {expected}else{"wrong".into()}));}
+                let target=callback_for_browser.clone();
+                tokio::spawn(async move { reqwest::Client::new().get(target).query(&params).send().await.unwrap(); });
+                Ok(())
+            }).await;
+            if mode=="matching" {assert_eq!(result.unwrap().access_token,"synthetic-token");}
+            else {assert!(result.unwrap_err().contains("state mismatch"));}
+        }
+    }
 }

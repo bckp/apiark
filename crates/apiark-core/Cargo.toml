@@ -32,6 +32,13 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 md4 = "0.10"
 des = "0.8"
 walkdir = "2"
+cookie = "0.18"
+psl = "2"
+csv = "1"
+cap-std = "3"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [dev-dependencies]
 tempfile = "3"
+axum = "0.7"
+futures-util = "0.3"

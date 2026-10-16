@@ -9,6 +9,7 @@ var __mutations = {
   variables: {},
   tests: [],
   console: [],
+  visualizations: [],
   request: {
     method: __ctx.request.method,
     url: __ctx.request.url,
@@ -180,6 +181,12 @@ function __expect(val) {
 
 // --- ark object ---
 var ark = {
+  visualize: function(type, options) {
+    if (__phase !== "post_response") throw new Error("ark.visualize is available only after a response");
+    if (!options || typeof options !== "object") throw new Error("ark.visualize requires options");
+    if (__mutations.visualizations.length >= 4) throw new Error("Maximum 4 visualization outputs");
+    __mutations.visualizations.push({type: type, name: options.name || "Visualization", data: options.data, mimeType: options.mimeType});
+  },
   request: {
     get url() { return __mutations.request.url; },
     get method() { return __mutations.request.method; },
@@ -221,7 +228,8 @@ var ark = {
   variables: __makeStore(__ctx.variables, __mutations.variables),
   test: function(name, fn) {
     try {
-      fn();
+      var returned = fn();
+      if (returned && typeof returned.then === "function") throw new Error("Async tests are unsupported; use synchronous ark.test callbacks");
       __mutations.tests.push({ name: name, passed: true, error: null });
     } catch(e) {
       __mutations.tests.push({ name: name, passed: false, error: e.message || String(e) });

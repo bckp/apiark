@@ -28,6 +28,8 @@ pub struct ResponseData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CookieData {
+    #[serde(default = "host_only_default")]
+    pub host_only: bool,
     pub name: String,
     pub value: String,
     pub domain: Option<String>,
@@ -35,4 +37,8 @@ pub struct CookieData {
     pub expires: Option<String>,
     pub http_only: bool,
     pub secure: bool,
+}
+
+fn host_only_default() -> bool {
+    true
 }

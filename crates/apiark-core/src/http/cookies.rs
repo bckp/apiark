@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CookieEntry {
+    #[serde(default = "host_only_default")]
+    pub host_only: bool,
     pub name: String,
     pub value: String,
     pub domain: String,
@@ -14,6 +16,61 @@ pub struct CookieEntry {
     pub http_only: bool,
     pub secure: bool,
     pub same_site: Option<String>,
+}
+
+fn host_only_default() -> bool {
+    true
+}
+
+impl From<&crate::models::response::CookieData> for CookieEntry {
+    fn from(c: &crate::models::response::CookieData) -> Self {
+        Self {
+            host_only: c.host_only,
+            name: c.name.clone(),
+            value: c.value.clone(),
+            domain: c.domain.clone().unwrap_or_default(),
+            path: c.path.clone().unwrap_or_else(|| "/".into()),
+            expires: c.expires.clone(),
+            http_only: c.http_only,
+            secure: c.secure,
+            same_site: None,
+        }
+    }
+}
+
+impl CookieEntry {
+    pub fn matches(&self, url: &url::Url) -> bool {
+        let Some(host) = url.host_str() else {
+            return false;
+        };
+        if self.domain.is_empty() || (self.secure && url.scheme() != "https") {
+            return false;
+        }
+        let domain = self.domain.trim_start_matches('.');
+        let domain_match = host == domain
+            || (!self.host_only
+                && host.parse::<std::net::IpAddr>().is_err()
+                && host
+                    .strip_suffix(domain)
+                    .is_some_and(|prefix| prefix.ends_with('.')));
+        let path = if self.path.starts_with('/') {
+            self.path.as_str()
+        } else {
+            "/"
+        };
+        let path_match = url.path() == path
+            || (url.path().starts_with(path)
+                && (path.ends_with('/') || url.path().as_bytes().get(path.len()) == Some(&b'/')));
+        domain_match && path_match && !self.expired()
+    }
+
+    fn expired(&self) -> bool {
+        self.expires.as_ref().is_some_and(|s| {
+            chrono::DateTime::parse_from_rfc3339(s)
+                .map(|t| t.timestamp() <= chrono::Utc::now().timestamp())
+                .unwrap_or(true)
+        })
+    }
 }
 
 /// Per-collection cookie jar. Stores cookies in memory with optional persistence.
@@ -35,6 +92,17 @@ impl CookieJarManager {
         Ok(jars.get(collection_path).cloned().unwrap_or_default())
     }
 
+    pub fn cookie_header(&self, collection_path: &str, url: &url::Url) -> Result<String, String> {
+        let mut cookies = self.get_cookies(collection_path)?;
+        cookies.retain(|c| c.matches(url));
+        cookies.sort_by_key(|c| std::cmp::Reverse(c.path.len()));
+        Ok(cookies
+            .iter()
+            .map(|c| format!("{}={}", c.name, c.value))
+            .collect::<Vec<_>>()
+            .join("; "))
+    }
+
     /// Store cookies from a response's Set-Cookie headers.
     pub fn store_cookies(
         &self,
@@ -45,6 +113,14 @@ impl CookieJarManager {
         let jar = jars.entry(collection_path.to_string()).or_default();
 
         for new_cookie in cookies {
+            jar.retain(|c| {
+                !(c.name == new_cookie.name
+                    && c.domain == new_cookie.domain
+                    && c.path == new_cookie.path)
+            });
+            if new_cookie.domain.is_empty() || new_cookie.expired() {
+                continue;
+            }
             // Replace existing cookie with same name+domain+path
             if let Some(existing) = jar.iter_mut().find(|c| {
                 c.name == new_cookie.name

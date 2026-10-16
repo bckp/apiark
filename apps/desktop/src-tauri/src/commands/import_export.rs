@@ -173,7 +173,7 @@ pub fn import_environment(file_path: &str, collection_path: &str) -> Result<Stri
         scope: Default::default(),
     };
 
-    crate::storage::environment::save_environment(Path::new(collection_path), &env)?;
+    crate::storage::safe_environment::save(Path::new(collection_path), &env, true)?;
 
     Ok(name)
 }

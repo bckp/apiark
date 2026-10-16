@@ -1,126 +1,163 @@
+use super::{
+    cookies::{CookieEntry, CookieJarManager},
+    error_classifier::classify_reqwest_error,
+    request_builder::{build_client, build_request},
+    response_parser::{parse_response, parse_set_cookie_header},
+};
+use crate::models::{
+    collection::CollectionDefaults,
+    error::HttpEngineError,
+    request::{HttpMethod, SendRequestParams},
+    response::ResponseData,
+};
 use std::time::Instant;
 
-use crate::models::error::HttpEngineError;
-use crate::models::request::SendRequestParams;
-use crate::models::response::{CookieData, ResponseData};
-
-use super::error_classifier::classify_reqwest_error;
-use super::request_builder::{build_client, build_request};
-use super::response_parser::{parse_response, parse_set_cookie_header};
-
-/// Core HTTP engine. Executes a request and returns the response.
 pub struct HttpEngine;
 
-/// Maximum number of redirects to follow manually.
-const MAX_REDIRECTS: usize = 10;
-
 impl HttpEngine {
-    /// Send an HTTP request and return the parsed response.
-    /// Handles redirects manually to capture Set-Cookie headers from every hop.
     pub async fn send(params: SendRequestParams) -> Result<ResponseData, HttpEngineError> {
-        let timeout_ms = params.timeout_ms.unwrap_or(30_000);
-        let should_follow_redirects = params.follow_redirects;
-
-        // Always disable automatic redirects — we handle them manually
-        // to capture Set-Cookie headers from intermediate responses.
-        let mut manual_params = params.clone();
-        manual_params.follow_redirects = false;
-
-        let client = build_client(&manual_params)?;
-        let request = build_request(&client, &manual_params)?;
-
-        let start = Instant::now();
-
-        let mut response = request
-            .send()
-            .await
-            .map_err(|e| classify_reqwest_error(e, timeout_ms))?;
-
-        // Accumulate cookies from all responses in the redirect chain
-        let mut all_cookies: Vec<CookieData> = Vec::with_capacity(4);
-        let mut redirect_count = 0;
-
-        // Collect cookies from intermediate redirect responses
-        while should_follow_redirects
-            && response.status().is_redirection()
-            && redirect_count < MAX_REDIRECTS
-        {
-            // Capture Set-Cookie headers from this redirect response
-            collect_set_cookie_headers(&response, &mut all_cookies);
-
-            // Get the redirect location
-            let location = response
-                .headers()
-                .get("location")
-                .and_then(|v| v.to_str().ok())
-                .map(|s| s.to_string());
-
-            let Some(location) = location else {
-                break;
-            };
-
-            // Resolve relative URLs
-            let next_url = if location.starts_with("http://") || location.starts_with("https://") {
-                location
-            } else {
-                let base = response.url().clone();
-                base.join(&location)
-                    .map(|u| u.to_string())
-                    .unwrap_or(location)
-            };
-
-            // Build cookie header from accumulated cookies for the next request
-            let cookie_header: String = all_cookies
-                .iter()
-                .map(|c| format!("{}={}", c.name, c.value))
-                .collect::<Vec<_>>()
-                .join("; ");
-
-            // Follow the redirect
-            let mut next_request = client.get(&next_url);
-            if !cookie_header.is_empty() {
-                next_request = next_request.header("Cookie", cookie_header);
-            }
-
-            response = next_request
-                .send()
-                .await
-                .map_err(|e| classify_reqwest_error(e, timeout_ms))?;
-
-            redirect_count += 1;
-        }
-
-        // Capture cookies from the final response too
-        collect_set_cookie_headers(&response, &mut all_cookies);
-
-        let elapsed_ms = start.elapsed().as_millis() as u64;
-
-        let mut result = parse_response(response, elapsed_ms).await?;
-
-        // Merge accumulated cookies into the result (dedup by name)
-        for cookie in all_cookies {
-            if !result.cookies.iter().any(|c| c.name == cookie.name) {
-                result.cookies.push(cookie);
-            }
-        }
-
-        Ok(result)
+        Self::send_with_jar(
+            params,
+            &CookieJarManager::new(),
+            "",
+            &CollectionDefaults::default(),
+        )
+        .await
     }
-}
 
-/// Extract Set-Cookie headers from a response and add to the cookie list.
-fn collect_set_cookie_headers(response: &reqwest::Response, cookies: &mut Vec<CookieData>) {
-    let url = response.url().clone();
-    for value in response.headers().get_all("set-cookie").iter() {
-        if let Ok(val) = value.to_str() {
-            if let Some(cookie) = parse_set_cookie_header(val, &url) {
-                // Update existing cookie or add new one
-                if let Some(existing) = cookies.iter_mut().find(|c| c.name == cookie.name) {
-                    *existing = cookie;
-                } else {
-                    cookies.push(cookie);
+    pub async fn send_with_jar(
+        mut params: SendRequestParams,
+        jar: &CookieJarManager,
+        key: &str,
+        defaults: &CollectionDefaults,
+    ) -> Result<ResponseData, HttpEngineError> {
+        let timeout_ms = params.timeout_ms.unwrap_or(30_000);
+        let follow = params.follow_redirects;
+        params.follow_redirects = false;
+        let client = build_client(&params)?;
+        let start = Instant::now();
+        let mut all_cookies = Vec::new();
+        let work = async {
+            for hop in 0..=10 {
+                let url = super::request_builder::build_url_with_params(
+                    &params.url,
+                    &params.params,
+                    &params.auth,
+                )?;
+                if !matches!(url.scheme(), "http" | "https")
+                    || !url.username().is_empty()
+                    || url.password().is_some()
+                {
+                    return Err(HttpEngineError::InvalidUrl(
+                        "Only HTTP(S) URLs without credentials are supported".into(),
+                    ));
                 }
+                let mut outgoing = params.clone();
+                let mut explicit = std::collections::HashMap::new();
+                for header in outgoing
+                    .headers
+                    .iter()
+                    .filter(|h| h.enabled && h.key.eq_ignore_ascii_case("cookie"))
+                {
+                    for part in header.value.split(';') {
+                        if let Some((name, value)) = part.trim().split_once('=') {
+                            explicit.insert(name.to_string(), value.to_string());
+                        }
+                    }
+                }
+                explicit.extend(outgoing.cookies.take().unwrap_or_default());
+                outgoing
+                    .headers
+                    .retain(|h| !h.key.eq_ignore_ascii_case("cookie"));
+                let mut pairs = Vec::new();
+                if defaults.send_cookies {
+                    let mut stored = jar
+                        .get_cookies(key)
+                        .map_err(HttpEngineError::RequestError)?;
+                    stored.retain(|c| c.matches(&url) && !explicit.contains_key(&c.name));
+                    stored.sort_by_key(|c| std::cmp::Reverse(c.path.len()));
+                    pairs.extend(
+                        stored
+                            .into_iter()
+                            .map(|c| format!("{}={}", c.name, c.value)),
+                    );
+                }
+                pairs.extend(explicit.into_iter().map(|(k, v)| format!("{k}={v}")));
+                if !pairs.is_empty() {
+                    outgoing
+                        .headers
+                        .push(crate::models::request::KeyValuePair::new(
+                            "Cookie".into(),
+                            pairs.join("; "),
+                            true,
+                        ));
+                }
+                let response = build_request(&client, &outgoing)?
+                    .send()
+                    .await
+                    .map_err(|e| classify_reqwest_error(e, timeout_ms))?;
+                let cookies: Vec<_> = response
+                    .headers()
+                    .get_all("set-cookie")
+                    .iter()
+                    .filter_map(|v| v.to_str().ok())
+                    .filter_map(|s| parse_set_cookie_header(s, response.url()))
+                    .collect();
+                if defaults.store_cookies {
+                    jar.store_cookies(key, cookies.iter().map(CookieEntry::from).collect())
+                        .map_err(HttpEngineError::RequestError)?;
+                }
+                all_cookies.extend(cookies);
+                let status = response.status().as_u16();
+                let redirect = matches!(status, 301 | 302 | 303 | 307 | 308) && follow;
+                let location = response
+                    .headers()
+                    .get("location")
+                    .and_then(|h| h.to_str().ok());
+                if !redirect || location.is_none() {
+                    let mut result =
+                        parse_response(response, start.elapsed().as_millis() as u64).await?;
+                    result.time_ms = start.elapsed().as_millis() as u64;
+                    result.cookies = all_cookies;
+                    return Ok(result);
+                }
+                if hop == 10 {
+                    return Err(HttpEngineError::RequestError("Too many redirects".into()));
+                }
+                let next = response
+                    .url()
+                    .join(location.unwrap())
+                    .map_err(|e| HttpEngineError::InvalidUrl(e.to_string()))?;
+                if next.origin() != url.origin() {
+                    params.auth = None;
+                    params.cookies = None;
+                    params.headers.clear();
+                }
+                if status == 303 && !matches!(params.method, HttpMethod::HEAD)
+                    || matches!(status, 301 | 302) && matches!(params.method, HttpMethod::POST)
+                {
+                    params.method = HttpMethod::GET;
+                    params.body = None;
+                    params.headers.retain(|h| {
+                        !matches!(
+                            h.key.to_ascii_lowercase().as_str(),
+                            "content-type" | "content-length" | "transfer-encoding"
+                        )
+                    });
+                }
+                // Rebuild typed bodies, including multipart, for 307/308.
+                params.url = next.to_string();
+                params.params.clear();
             }
+            unreachable!()
+        };
+        let result = tokio::time::timeout(std::time::Duration::from_millis(timeout_ms), work)
+            .await
+            .map_err(|_| HttpEngineError::Timeout(timeout_ms))?;
+        if defaults.persist_cookies && defaults.store_cookies {
+            jar.save_to_disk(key)
+                .map_err(HttpEngineError::RequestError)?;
         }
+        result
     }
 }

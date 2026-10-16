@@ -1,6 +1,5 @@
 mod collection;
 mod import_export;
-mod interpolation;
 mod models;
 mod reporter;
 mod runner;
@@ -101,10 +100,10 @@ async fn main() -> anyhow::Result<()> {
                 .map_err(|e| anyhow::anyhow!("Collection path not found: {collection}: {e}"))?;
 
             let config = collection::load_config(&path)?;
-            println!("{} {}", "Running:".bold(), config.name);
+            eprintln!("{} {}", "Running:".bold(), config.name);
 
             if let Some(ref env_name) = env {
-                println!("{} {}", "Environment:".bold(), env_name);
+                eprintln!("{} {}", "Environment:".bold(), env_name);
             }
 
             let summary =
@@ -112,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
                     .await?;
 
             // Print summary line
-            println!();
+            eprintln!();
             let pass_color = if summary.total_failed == 0 {
                 format!("{} passed", summary.total_passed).green()
             } else {
@@ -123,7 +122,7 @@ async fn main() -> anyhow::Result<()> {
             } else {
                 format!("{} failed", summary.total_failed).green()
             };
-            println!(
+            eprintln!(
                 "{} {} requests: {}, {} ({}ms)",
                 "Summary:".bold(),
                 summary.total_requests,
@@ -174,8 +173,8 @@ async fn main() -> anyhow::Result<()> {
             std::fs::create_dir_all(&out_dir)
                 .map_err(|e| anyhow::anyhow!("Failed to create output directory: {e}"))?;
 
-            println!("{} {}", "Importing:".bold(), file);
-            println!("  Format: {fmt}");
+            eprintln!("{} {}", "Importing:".bold(), file);
+            eprintln!("  Format: {fmt}");
 
             let detected_format = if fmt == "auto" {
                 import_export::detect_format(&file_path)?
@@ -183,10 +182,10 @@ async fn main() -> anyhow::Result<()> {
                 fmt.to_string()
             };
 
-            println!("  Detected: {detected_format}");
+            eprintln!("  Detected: {detected_format}");
 
             let count = import_export::import_collection(&file_path, &out_dir, &detected_format)?;
-            println!(
+            eprintln!(
                 "{}",
                 format!("Imported {count} requests to {}", out_dir.display()).green()
             );
@@ -201,8 +200,8 @@ async fn main() -> anyhow::Result<()> {
                 .canonicalize()
                 .map_err(|e| anyhow::anyhow!("Collection not found: {collection}: {e}"))?;
 
-            println!("{} {}", "Exporting:".bold(), collection);
-            println!("  Format: {format}");
+            eprintln!("{} {}", "Exporting:".bold(), collection);
+            eprintln!("  Format: {format}");
 
             let result = import_export::export_collection(&collection_path, &format)?;
 
@@ -210,7 +209,7 @@ async fn main() -> anyhow::Result<()> {
                 Some(ref path) => {
                     std::fs::write(path, &result)
                         .map_err(|e| anyhow::anyhow!("Failed to write output: {e}"))?;
-                    println!("{}", format!("Exported to {path}").green());
+                    eprintln!("{}", format!("Exported to {path}").green());
                 }
                 None => {
                     println!("{result}");
@@ -226,7 +225,7 @@ fn write_output(content: &str, path: Option<&str>) -> anyhow::Result<()> {
     match path {
         Some(p) => {
             std::fs::write(p, content)?;
-            println!("Report written to: {p}");
+            eprintln!("Report written to: {p}");
         }
         None => {
             println!("{content}");

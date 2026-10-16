@@ -1,5 +1,6 @@
 pub mod assertions;
 pub mod engine;
+pub mod visualization;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -70,6 +71,7 @@ pub struct ScriptContext {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScriptResult {
+    pub visualizations: Vec<visualization::Visualization>,
     pub request: RequestSnapshot,
     pub env_mutations: HashMap<String, Option<String>>,
     pub global_mutations: HashMap<String, Option<String>>,

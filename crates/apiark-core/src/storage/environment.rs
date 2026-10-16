@@ -128,32 +128,5 @@ pub fn get_resolved_variables(
 
 /// Save an environment file to disk. Saves to shared or personal directory based on scope.
 pub fn save_environment(collection_path: &Path, env: &EnvironmentFile) -> Result<(), String> {
-    let subdir = match env.scope {
-        EnvironmentScope::Personal => "environments.local",
-        EnvironmentScope::Shared => "environments",
-    };
-    let env_dir = collection_path.join(".apiark").join(subdir);
-    fs::create_dir_all(&env_dir).map_err(|e| format!("Failed to create environments dir: {e}"))?;
-
-    // Ensure .gitignore exists in personal dir
-    if matches!(env.scope, EnvironmentScope::Personal) {
-        let gitignore = env_dir.join(".gitignore");
-        if !gitignore.exists() {
-            let _ = fs::write(&gitignore, "*\n!.gitignore\n");
-        }
-    }
-
-    let filename = env.name.to_lowercase().replace(' ', "-");
-    let file_path = env_dir.join(format!("{filename}.yaml"));
-
-    let yaml =
-        serde_yaml::to_string(env).map_err(|e| format!("Failed to serialize environment: {e}"))?;
-
-    // Atomic write
-    let tmp_path = file_path.with_extension("apiark.tmp");
-    fs::write(&tmp_path, &yaml).map_err(|e| format!("Failed to write temp file: {e}"))?;
-    fs::rename(&tmp_path, &file_path).map_err(|e| {
-        let _ = fs::remove_file(&tmp_path);
-        format!("Failed to rename temp file: {e}")
-    })
+    super::safe_environment::save(collection_path, env, false)
 }
