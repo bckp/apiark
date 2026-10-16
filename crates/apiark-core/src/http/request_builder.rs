@@ -318,6 +318,22 @@ fn apply_auth(
 }
 
 /// Apply request body.
+fn body_with_default_content_type(
+    builder: RequestBuilder,
+    content: &str,
+    content_type: &'static str,
+) -> Result<RequestBuilder, HttpEngineError> {
+    // Inspect the actual headers, including authentication-generated headers.
+    // RequestBuilder::header appends; a body default must only fill a missing key.
+    let (client, request) = builder.build_split();
+    let mut request = request.map_err(|e| HttpEngineError::RequestError(e.to_string()))?;
+    request
+        .headers_mut()
+        .entry(reqwest::header::CONTENT_TYPE)
+        .or_insert(reqwest::header::HeaderValue::from_static(content_type));
+    Ok(RequestBuilder::from_parts(client, request).body(content.to_owned()))
+}
+
 fn apply_body(
     builder: RequestBuilder,
     body: &Option<RequestBody>,
@@ -328,15 +344,11 @@ fn apply_body(
     };
 
     match body.body_type {
-        BodyType::Json => Ok(builder
-            .header("Content-Type", "application/json")
-            .body(body.content.clone())),
-        BodyType::Xml => Ok(builder
-            .header("Content-Type", "application/xml")
-            .body(body.content.clone())),
-        BodyType::Raw => Ok(builder
-            .header("Content-Type", "text/plain")
-            .body(body.content.clone())),
+        BodyType::Json => {
+            body_with_default_content_type(builder, &body.content, "application/json")
+        }
+        BodyType::Xml => body_with_default_content_type(builder, &body.content, "application/xml"),
+        BodyType::Raw => body_with_default_content_type(builder, &body.content, "text/plain"),
         BodyType::Urlencoded => {
             let pairs: Vec<(String, String)> = body
                 .form_data
@@ -368,9 +380,9 @@ fn apply_body(
             }
             Ok(builder.multipart(form))
         }
-        BodyType::Binary => Ok(builder
-            .header("Content-Type", "application/octet-stream")
-            .body(body.content.clone().into_bytes())),
+        BodyType::Binary => {
+            body_with_default_content_type(builder, &body.content, "application/octet-stream")
+        }
         BodyType::None => Ok(builder),
     }
 }

@@ -26,6 +26,67 @@ async fn server(app: Router) -> (String, tokio::task::JoinHandle<()>) {
     (format!("http://127.0.0.1:{}", addr.port()), task)
 }
 
+#[tokio::test]
+async fn body_content_type_defaults_never_append_to_explicit_headers() {
+    let (base, task) = server(Router::new().route("/", post(|headers: axum::http::HeaderMap, body: String| async move {
+        axum::Json(serde_json::json!({
+            "types": headers.get_all("content-type").iter().map(|v| v.to_str().unwrap()).collect::<Vec<_>>(),
+            "body": body,
+        }))
+    }))).await;
+    for (body_type, default) in [
+        ("json", "application/json"),
+        ("xml", "application/xml"),
+        ("raw", "text/plain"),
+        ("binary", "application/octet-stream"),
+    ] {
+        for (headers, auth, expected) in [
+            (serde_json::json!([]), serde_json::Value::Null, default),
+            (
+                serde_json::json!([{"key":"Content-Type","value":default}]),
+                serde_json::Value::Null,
+                default,
+            ),
+            (
+                serde_json::json!([{"key":"cOnTeNt-TyPe","value":"application/x-synthetic"}]),
+                serde_json::Value::Null,
+                "application/x-synthetic",
+            ),
+            (
+                serde_json::json!([{"key":"Content-Type","value":"application/x-disabled","enabled":false}]),
+                serde_json::Value::Null,
+                default,
+            ),
+            (
+                serde_json::json!([]),
+                serde_json::json!({"type":"api-key","key":"Content-Type","value":"application/x-auth-generated","addTo":"header"}),
+                "application/x-auth-generated",
+            ),
+        ] {
+            let p: SendRequestParams = serde_json::from_value(serde_json::json!({"method":"POST","url":base,"headers":headers,"auth":auth,"body":{"type":body_type,"content":"synthetic body"}})).unwrap();
+            let response = execute(
+                p,
+                &mut HashMap::new(),
+                None,
+                &CookieJarManager::new(),
+                Scripts::default(),
+                |_| Ok(()),
+            )
+            .await
+            .unwrap();
+            assert_eq!(response.status, 200);
+            let echoed: serde_json::Value = serde_json::from_str(&response.body).unwrap();
+            assert_eq!(
+                echoed["types"],
+                serde_json::json!([expected]),
+                "{body_type}"
+            );
+            assert_eq!(echoed["body"], "synthetic body");
+        }
+    }
+    task.abort();
+}
+
 #[test]
 fn cookie_boundaries() {
     let url = url::Url::parse("https://api.example.test/Api/items").unwrap();
