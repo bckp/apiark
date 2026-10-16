@@ -42,6 +42,7 @@ pub fn parse_bruno_dir(dir_path: &str) -> Result<ImportData, String> {
     }
 
     Ok(ImportData {
+        postman: None,
         collection_name,
         items,
         environments,
@@ -104,6 +105,7 @@ fn scan_bruno_dir(
             let sub_items = scan_bruno_dir(&path, warnings)?;
             if !sub_items.is_empty() {
                 folders.push(ImportItem::Folder {
+                    postman: None,
                     name: file_name,
                     items: sub_items,
                 });
@@ -174,6 +176,7 @@ fn parse_bru_request(content: &str) -> Option<ImportItem> {
     let tests = blocks.get("tests").map(|s| s.to_string());
 
     Some(ImportItem::Request {
+        postman: None,
         name,
         method,
         url,

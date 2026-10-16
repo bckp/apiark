@@ -127,6 +127,7 @@ pub fn parse_openapi(content: &str) -> Result<ImportData, String> {
                     parse_request_body(operation.get("requestBody"), &root, &name, &mut warnings);
 
                 let item = ImportItem::Request {
+                    postman: None,
                     name: name.clone(),
                     method: method_upper,
                     url: final_url,
@@ -160,6 +161,7 @@ pub fn parse_openapi(content: &str) -> Result<ImportData, String> {
     let mut items: Vec<ImportItem> = tag_folders
         .into_iter()
         .map(|(tag, reqs)| ImportItem::Folder {
+            postman: None,
             name: tag,
             items: reqs,
         })
@@ -181,6 +183,7 @@ pub fn parse_openapi(content: &str) -> Result<ImportData, String> {
     };
 
     Ok(ImportData {
+        postman: None,
         collection_name: title,
         items,
         environments,

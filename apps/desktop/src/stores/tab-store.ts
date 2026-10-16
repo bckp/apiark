@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import {parseUrlParams,buildUrlWithParams,extractPathVariables,resolvePathVariables} from "@/lib/url-params";
 import type {
   HttpMethod,
   KeyValuePair,
@@ -60,6 +61,7 @@ interface TabState {
   setParams: (params: KeyValuePair[]) => void;
   setBody: (body: RequestBody) => void;
   setAuth: (auth: AuthConfig) => void;
+  inheritAuth: () => void;
   setPathVariables: (pathVariables: Record<string, string>) => void;
   setPreRequestScript: (script: string | null) => void;
   setPostResponseScript: (script: string | null) => void;
@@ -106,38 +108,6 @@ function generateTabId(): string {
  * Parse query params from a URL string into KeyValuePair[].
  * Returns { baseUrl, params } where baseUrl has no query string.
  */
-function parseUrlParams(url: string): { baseUrl: string; params: KeyValuePair[] } {
-  const qIndex = url.indexOf("?");
-  if (qIndex === -1) return { baseUrl: url, params: [] };
-
-  const baseUrl = url.slice(0, qIndex);
-  const queryString = url.slice(qIndex + 1);
-  const params: KeyValuePair[] = [];
-
-  if (queryString) {
-    for (const part of queryString.split("&")) {
-      const eqIndex = part.indexOf("=");
-      const key = eqIndex === -1 ? part : part.slice(0, eqIndex);
-      const value = eqIndex === -1 ? "" : part.slice(eqIndex + 1);
-      params.push({ id: kvId(), key: decodeURIComponent(key), value: decodeURIComponent(value), enabled: true });
-    }
-  }
-
-  return { baseUrl, params };
-}
-
-/**
- * Build a URL query string from KeyValuePair[], appending to a base URL.
- */
-function buildUrlWithParams(baseUrl: string, params: KeyValuePair[]): string {
-  const enabledParams = params.filter((p) => p.enabled && p.key.trim());
-  if (enabledParams.length === 0) return baseUrl;
-  const qs = enabledParams
-    .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
-    .join("&");
-  return `${baseUrl}?${qs}`;
-}
-
 /**
  * Tracks file paths that were recently saved by us (save/autoSave).
  * The file watcher checks this set to avoid reloading tabs that we just wrote.
@@ -273,7 +243,7 @@ function requestFileToTab(
   // Separate path variables from query params.
   // Path variables match :paramName placeholders in the URL.
   const urlPathVarNames = new Set(
-    (file.url.match(/:([\w]+)/g) || []).map((m) => m.slice(1)),
+    extractPathVariables(file.url),
   );
   const pathVariables: Record<string, string> = {};
   const fileQueryParams: KeyValuePair[] = [];
@@ -299,7 +269,7 @@ function requestFileToTab(
     ? {
         type: file.body.type as RequestBody["type"],
         content: file.body.content || "",
-        formData: [],
+        formData: file.body.type === "form-data" ? JSON.parse(file.body.content || "[]").map((v: Record<string, unknown>) => ({...v, id: kvId(), enabled: v.disabled !== true && v.enabled !== false})) : file.body.type === "urlencoded" ? [...new URLSearchParams(file.body.content || "")].map(([key,value]) => ({id:kvId(),key,value,enabled:true})) : [],
       }
     : { type: "none", content: "", formData: [] };
 
@@ -369,6 +339,7 @@ function requestFileToTab(
 
   return {
     id: generateTabId(),
+    postman: file.postman,
     name: file.name,
     filePath,
     collectionPath,
@@ -377,12 +348,13 @@ function requestFileToTab(
     graphql: graphqlState,
     grpc: grpcState,
     method: file.method,
-    url: file.url,
+    url: buildUrlWithParams(file.url,mergedParams),
     headers,
     params,
     pathVariables,
     body,
     auth: file.auth || { type: "none" },
+    authInherited: file.auth === undefined || file.auth === null,
     preRequestScript: file.preRequestScript ?? null,
     postResponseScript: file.postResponseScript ?? null,
     testScript: file.tests ?? null,
@@ -429,21 +401,23 @@ function tabToRequestFile(tab: Tab): RequestFile {
       headers["Content-Type"] = "application/json";
     }
   } else if (tab.body.type !== "none") {
-    body = { type: tab.body.type, content: tab.body.content };
+    body = { type: tab.body.type, content: tab.body.type === "form-data" ? JSON.stringify(tab.body.formData) : tab.body.type === "urlencoded" ? new URLSearchParams(tab.body.formData.filter(v=>v.enabled).map(v=>[v.key,v.value])).toString() : tab.body.content };
   }
 
   return {
+    postman: tab.postman,
     name: tab.name,
     method: tab.protocol === "graphql" ? "POST" : tab.method,
     url: tab.url, // URL already contains query params (synced)
     protocol: tab.protocol !== "http" ? tab.protocol : undefined,
     headers,
     params,
-    auth: tab.auth.type !== "none" ? tab.auth : undefined,
+    auth: tab.auth.type !== "none" || tab.authInherited === false ? tab.auth : undefined,
     body,
     preRequestScript: tab.preRequestScript || undefined,
     postResponseScript: tab.postResponseScript || undefined,
     tests: tab.testScript || undefined,
+    assert: tab.assertions || undefined,
   };
 }
 
@@ -677,13 +651,14 @@ export const useTabStore = create<TabState>((set, get) => ({
   setHeaders: (headers) => set((state) => updateActiveTab(state, () => ({ headers }))),
   setParams: (params) => set((state) => updateActiveTab(state, (tab) => {
     // Sync: rebuild URL query string from params
-    const baseUrl = tab.url.split("?")[0];
+    const baseUrl = tab.url;
     const newUrl = buildUrlWithParams(baseUrl, params);
     return { params, url: newUrl };
   })),
   setPathVariables: (pathVariables) => set((state) => updateActiveTab(state, () => ({ pathVariables }))),
   setBody: (body) => set((state) => updateActiveTab(state, () => ({ body }))),
-  setAuth: (auth) => set((state) => updateActiveTab(state, () => ({ auth }))),
+  setAuth: (auth) => set((state) => updateActiveTab(state, () => ({ auth, authInherited: false }))),
+  inheritAuth: () => set((state) => updateActiveTab(state, () => ({auth:{type:"none"},authInherited:true}))),
   setPreRequestScript: (script) => set((state) => updateActiveTab(state, () => ({ preRequestScript: script }))),
   setPostResponseScript: (script) => set((state) => updateActiveTab(state, () => ({ postResponseScript: script }))),
   setTestScript: (script) => set((state) => updateActiveTab(state, () => ({ testScript: script }))),
@@ -756,12 +731,7 @@ export const useTabStore = create<TabState>((set, get) => ({
     }
 
     // Resolve path variables (:paramName → value) in the URL before sending
-    let resolvedUrl = tab.url.trim();
-    for (const [key, value] of Object.entries(tab.pathVariables)) {
-      if (value) {
-        resolvedUrl = resolvedUrl.replace(new RegExp(`:${key}\\b`, "g"), encodeURIComponent(value));
-      }
-    }
+    const resolvedUrl = resolvePathVariables(tab.url.trim(), tab.pathVariables);
 
     const requestParams = {
       method: tab.protocol === "graphql" ? ("POST" as const) : tab.method,
@@ -771,7 +741,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       // to avoid the Rust side double-appending them
       params: [] as KeyValuePair[],
       body,
-      auth: tab.auth.type !== "none" ? tab.auth : undefined,
+      auth: tab.auth.type !== "none" || tab.authInherited === false ? tab.auth : undefined,
       proxy,
       timeoutMs: settings.timeoutMs,
       followRedirects: settings.followRedirects,
@@ -782,7 +752,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       clientCertPassphrase: settings.clientCertPassphrase ?? undefined,
     };
 
-    const hasScripts = tab.preRequestScript || tab.postResponseScript || tab.testScript || tab.assertions;
+    const hasScripts = Boolean(tab.collectionPath || tab.preRequestScript || tab.postResponseScript || tab.testScript || tab.assertions);
 
       if (hasScripts) {
         const scriptedResponse = await sendRequestWithScripts(
@@ -794,6 +764,7 @@ export const useTabStore = create<TabState>((set, get) => ({
           tab.postResponseScript,
           tab.testScript,
           tab.assertions,
+          tab.filePath,
         );
         if (!current()) return;
         // Apply env mutations to the environment store
@@ -838,6 +809,7 @@ export const useTabStore = create<TabState>((set, get) => ({
           variables,
           tab.collectionPath ?? undefined,
           tab.name !== "Untitled Request" ? tab.name : undefined,
+          tab.filePath,
         );
         if (!current()) return;
         set({

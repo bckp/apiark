@@ -8,12 +8,7 @@ import { HintTooltip } from "@/components/ui/hint-tooltip";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { Plus, Trash2, FileUp } from "lucide-react";
 
-/** Extract :paramName path variables from a URL */
-function extractPathVariables(url: string): string[] {
-  const matches = url.match(/:([\w]+)/g);
-  if (!matches) return [];
-  return [...new Set(matches.map((m) => m.slice(1)))];
-}
+import {extractPathVariables} from "@/lib/url-params";
 
 type Tab = "params" | "headers" | "body" | "auth" | "scripts" | "tests";
 
@@ -134,7 +129,7 @@ export function RequestPanel() {
         )}
 
         {activeTab === "auth" && (
-          <AuthEditor auth={auth} onChange={setAuth} />
+          <AuthEditor auth={auth} onChange={setAuth} inherited={tab.authInherited !== false && auth.type === "none"} onInherit={useTabStore.getState().inheritAuth} />
         )}
 
         {activeTab === "scripts" && (
@@ -541,17 +536,22 @@ const SELECT_CLASS =
 function AuthEditor({
   auth,
   onChange,
+  inherited,
+  onInherit,
 }: {
   auth: AuthConfig;
   onChange: (auth: AuthConfig) => void;
+  inherited: boolean;
+  onInherit: () => void;
 }) {
   const { t } = useTranslation();
   return (
     <div className="space-y-3">
       {/* Auth type selector */}
       <select
-        value={auth.type}
+        value={inherited ? "inherit" : auth.type}
         onChange={(e) => {
+          if(e.target.value === "inherit") {onInherit();return;}
           const type = e.target.value as AuthConfig["type"];
           switch (type) {
             case "none":
@@ -627,6 +627,7 @@ function AuthEditor({
         }}
         className={SELECT_CLASS}
       >
+        <option value="inherit">Inherit collection/folder auth</option>
         <option value="none">{t("auth.none")}</option>
         <option value="bearer">{t("auth.bearer")}</option>
         <option value="basic">{t("auth.basic")}</option>

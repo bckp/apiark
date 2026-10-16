@@ -89,10 +89,22 @@ pub async fn run_collection(
             match file {
                 Err(e) => result.error = Some(e),
                 Ok(file) => {
+                    if file
+                        .protocol
+                        .as_deref()
+                        .is_some_and(|p| !matches!(p, "http" | "graphql"))
+                    {
+                        return Err(format!(
+                            "Unsupported protocol {} in {}",
+                            file.protocol.as_deref().unwrap(),
+                            path
+                        ));
+                    }
                     result.name = file.name.clone();
                     result.method = format!("{:?}", file.method);
                     result.url = file.url.clone();
                     let scripts = Scripts {
+                        source_path: Some(path.clone()),
                         pre_request: file.pre_request_script.clone(),
                         post_response: file.post_response_script.clone(),
                         tests: file.tests.clone(),

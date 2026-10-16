@@ -61,8 +61,16 @@ fn scan_directory(dir: &Path) -> Result<Vec<CollectionNode>, String> {
             continue;
         }
 
+        if entry.file_type().map_err(|e| e.to_string())?.is_symlink() {
+            return Err(format!(
+                "Symlink in collection is unsupported: {}",
+                path.display()
+            ));
+        }
         if path.is_dir() {
-            let folder_name = file_name.clone();
+            let folder_name = load_folder_config(&path)
+                .and_then(|c| c.name)
+                .unwrap_or_else(|| file_name.clone());
 
             let children = scan_directory(&path)?;
             folders.push((
@@ -95,7 +103,7 @@ fn scan_directory(dir: &Path) -> Result<Vec<CollectionNode>, String> {
                     ));
                 }
                 Err(e) => {
-                    tracing::warn!("Skipping invalid request file {}: {e}", path.display());
+                    return Err(format!("Invalid request file {}: {e}", path.display()));
                 }
             }
         }
@@ -113,6 +121,21 @@ fn scan_directory(dir: &Path) -> Result<Vec<CollectionNode>, String> {
 
     let mut result: Vec<CollectionNode> = folders.into_iter().map(|(_, n)| n).collect();
     result.extend(requests.into_iter().map(|(_, n)| n));
+    result.sort_by_key(|node| {
+        let path = match node {
+            CollectionNode::Request { path, .. }
+            | CollectionNode::Folder { path, .. }
+            | CollectionNode::Collection { path, .. } => Path::new(path),
+        };
+        let stem = if path.is_dir() {
+            path.file_name()
+        } else {
+            path.file_stem()
+        }
+        .unwrap_or_default()
+        .to_string_lossy();
+        order_map.get(stem.as_ref()).copied().unwrap_or(usize::MAX)
+    });
     Ok(result)
 }
 
@@ -303,6 +326,7 @@ pub fn save_folder_order(dir: &Path, order: &[String]) -> Result<(), String> {
 
     // Load existing config or create new
     let mut config = load_folder_config(dir).unwrap_or(FolderConfig {
+        postman: None,
         name: None,
         auth: None,
         order: Vec::new(),

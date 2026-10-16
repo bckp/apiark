@@ -79,6 +79,7 @@ pub fn parse_insomnia(content: &str) -> Result<ImportData, String> {
     }
 
     Ok(ImportData {
+        postman: None,
         collection_name: workspace_name,
         items,
         environments,
@@ -111,6 +112,7 @@ fn build_tree(
             "request_group" => {
                 let sub_items = build_tree(id, children_map, warnings);
                 items.push(ImportItem::Folder {
+                    postman: None,
                     name,
                     items: sub_items,
                 });
@@ -164,6 +166,7 @@ fn parse_request(res: &Value, name: &str, warnings: &mut Vec<ImportWarning>) -> 
         .map(|s| s.to_string());
 
     Some(ImportItem::Request {
+        postman: None,
         name: name.to_string(),
         method,
         url,

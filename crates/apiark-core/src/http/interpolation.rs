@@ -118,3 +118,30 @@ mod tests {
         assert_eq!(result.len(), 36); // UUID v4 format
     }
 }
+/// Interpolate query keys/values before URL encoding, so values cannot add new parameters.
+pub fn interpolate_url(
+    input: &str,
+    variables: &std::collections::HashMap<String, String>,
+) -> String {
+    let (before_fragment, fragment) = input
+        .split_once('#')
+        .map(|(a, b)| (a, Some(b)))
+        .unwrap_or((input, None));
+    let result = if let Some((base, query)) = before_fragment.split_once('?') {
+        let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+        for (key, value) in url::form_urlencoded::parse(query.as_bytes()) {
+            serializer.append_pair(
+                &interpolate(&key, variables),
+                &interpolate(&value, variables),
+            );
+        }
+        format!("{}?{}", interpolate(base, variables), serializer.finish())
+    } else {
+        interpolate(before_fragment, variables)
+    };
+    if let Some(fragment) = fragment {
+        format!("{result}#{}", interpolate(fragment, variables))
+    } else {
+        result
+    }
+}

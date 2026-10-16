@@ -38,6 +38,7 @@ pub fn parse_hoppscotch(content: &str) -> Result<ImportData, String> {
     }
 
     Ok(ImportData {
+        postman: None,
         collection_name,
         items,
         environments: Vec::new(),
@@ -72,7 +73,11 @@ fn parse_folder(folder: &Value, warnings: &mut Vec<ImportWarning>) -> Option<Imp
         }
     }
 
-    Some(ImportItem::Folder { name, items })
+    Some(ImportItem::Folder {
+        postman: None,
+        name,
+        items,
+    })
 }
 
 fn parse_request(req: &Value, warnings: &mut Vec<ImportWarning>) -> Option<ImportItem> {
@@ -120,6 +125,7 @@ fn parse_request(req: &Value, warnings: &mut Vec<ImportWarning>) -> Option<Impor
     let auth = parse_auth(req, &name, warnings);
 
     Some(ImportItem::Request {
+        postman: None,
         name,
         method,
         url,

@@ -7,5 +7,6 @@ pub mod importer;
 pub mod models;
 pub mod redaction;
 pub mod runner;
+pub mod scopes;
 pub mod scripting;
 pub mod storage;

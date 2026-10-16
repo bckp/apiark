@@ -18,6 +18,7 @@ pub async fn send_request(
     variables: Option<HashMap<String, String>>,
     collection_path: Option<String>,
     request_name: Option<String>,
+    request_path: Option<String>,
 ) -> Result<ResponseData, String> {
     let result = send_request_with_scripts(
         state,
@@ -27,6 +28,7 @@ pub async fn send_request(
         variables,
         collection_path,
         request_name,
+        request_path,
         None,
         None,
         None,
@@ -57,6 +59,7 @@ pub async fn send_request_with_scripts(
     variables: Option<HashMap<String, String>>,
     collection_path: Option<String>,
     request_name: Option<String>,
+    request_path: Option<String>,
     pre_request_script: Option<String>,
     post_response_script: Option<String>,
     test_script: Option<String>,
@@ -69,6 +72,7 @@ pub async fn send_request_with_scripts(
         collection_path.as_deref(),
         &cookie_jar,
         Scripts {
+            source_path: request_path,
             pre_request: pre_request_script,
             post_response: post_response_script,
             tests: test_script,

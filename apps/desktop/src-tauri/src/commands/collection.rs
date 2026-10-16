@@ -77,6 +77,7 @@ pub async fn create_request(
 ) -> Result<String, String> {
     let dir_path = Path::new(&dir);
     let request = RequestFile {
+        postman: None,
         name,
         method,
         url,
@@ -145,6 +146,7 @@ pub async fn create_sample_collection() -> Result<String, String> {
 
     // Collection config
     let config = CollectionConfig {
+        postman: None,
         name: "Getting Started".to_string(),
         version: 1,
         defaults: Default::default(),
@@ -219,6 +221,7 @@ pub async fn create_collection(parent_dir: String, name: String) -> Result<Strin
     }
 
     let config = CollectionConfig {
+        postman: None,
         name: name.trim().to_string(),
         version: 1,
         defaults: Default::default(),

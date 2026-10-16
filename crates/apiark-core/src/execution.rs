@@ -40,6 +40,7 @@ pub struct ScriptedResponseData {
 
 #[derive(Default)]
 pub struct Scripts {
+    pub source_path: Option<String>,
     pub pre_request: Option<String>,
     pub post_response: Option<String>,
     pub tests: Option<String>,
@@ -56,12 +57,25 @@ pub async fn execute(
     resolve_auth: impl Fn(&mut SendRequestParams) -> Result<(), String>,
 ) -> Result<ScriptedResponseData, String> {
     let Scripts {
+        source_path,
         pre_request: pre_request_script,
         post_response: post_response_script,
         tests: test_script,
         assertions_yaml,
     } = scripts;
-    let mut vars = variables.clone();
+    let scopes = crate::scopes::load(collection_path, source_path.as_deref())?;
+    let mut vars = scopes.variables;
+    vars.extend(variables.clone());
+    let combine = |mut scoped: Vec<String>, local: Option<String>| {
+        scoped.extend(local);
+        if scoped.is_empty() {
+            None
+        } else {
+            Some(scoped.join("\n;\n"))
+        }
+    };
+    let pre_request_script = combine(scopes.pre, pre_request_script);
+    let test_script = combine(scopes.post, test_script);
     let mut interpolated = interpolate_params(&params, &vars);
 
     let defaults = collection_path
@@ -69,9 +83,8 @@ pub async fn execute(
         .map(|c| c.defaults)
         .unwrap_or_default();
     if interpolated.auth.is_none() {
-        interpolated.auth = defaults.auth.as_ref().map(|a| interpolate_auth(a, &vars));
+        interpolated.auth = scopes.auth.as_ref().map(|a| interpolate_auth(a, &vars));
     }
-    resolve_auth(&mut interpolated)?;
     let mut all_console: Vec<ConsoleEntry> = Vec::new();
     let mut all_tests: Vec<TestResult> = Vec::new();
     let mut visualizations = Vec::new();
@@ -128,6 +141,7 @@ pub async fn execute(
     }
 
     interpolated = interpolate_params(&interpolated, &vars);
+    resolve_auth(&mut interpolated)?;
     // 2. Send the HTTP request
     let response = HttpEngine::send_with_jar(
         interpolated.clone(),
@@ -252,12 +266,23 @@ pub async fn execute(
     }
 
     if !script_failed {
-        match crate::scripting::visualization::validate(Some(&serde_json::to_value(&visualizations).map_err(|e|e.to_string())?)) {
+        match crate::scripting::visualization::validate(Some(
+            &serde_json::to_value(&visualizations).map_err(|e| e.to_string())?,
+        )) {
             Ok(validated) => visualizations = validated,
-            Err(e) => { script_failed = true; all_tests.push(TestResult {name:"Visualizations".into(),passed:false,error:Some(e)}); }
+            Err(e) => {
+                script_failed = true;
+                all_tests.push(TestResult {
+                    name: "Visualizations".into(),
+                    passed: false,
+                    error: Some(e),
+                });
+            }
         }
     }
-    if script_failed { visualizations.clear(); }
+    if script_failed {
+        visualizations.clear();
+    }
     *variables = vars;
     Ok(ScriptedResponseData {
         visualizations,
@@ -283,7 +308,7 @@ pub fn interpolate_params(
     vars: &HashMap<String, String>,
 ) -> SendRequestParams {
     let mut interpolated = params.clone();
-    interpolated.url = interpolation::interpolate(&params.url, vars);
+    interpolated.url = interpolation::interpolate_url(&params.url, vars);
 
     interpolated.headers = params
         .headers
@@ -308,6 +333,36 @@ pub fn interpolate_params(
             )
         })
         .collect();
+
+    // The YAML params map historically holds both path and query variables.
+    // Replace complete path segments only, then remove those entries from query.
+    let mut query_params = Vec::new();
+    for param in std::mem::take(&mut interpolated.params) {
+        let split = interpolated
+            .url
+            .find(['?', '#'])
+            .unwrap_or(interpolated.url.len());
+        let (path, suffix) = interpolated.url.split_at(split);
+        let target = format!(":{}", param.key);
+        let mut used = false;
+        let segments: Vec<String> = path
+            .split('/')
+            .map(|segment| {
+                if param.enabled && segment == target {
+                    used = true;
+                    urlencoding::encode(&param.value).into_owned()
+                } else {
+                    segment.to_string()
+                }
+            })
+            .collect();
+        if used {
+            interpolated.url = format!("{}{suffix}", segments.join("/"));
+        } else {
+            query_params.push(param);
+        }
+    }
+    interpolated.params = query_params;
 
     if let Some(ref body) = params.body {
         let mut new_body = body.clone();
@@ -506,7 +561,27 @@ pub fn request_file_to_params(file: &RequestFile) -> SendRequestParams {
         RequestBody {
             body_type,
             content: b.content.clone(),
-            form_data: Vec::new(),
+            form_data: match b.body_type.as_str() {
+                "form-data" => serde_json::from_str::<Vec<serde_json::Value>>(&b.content)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|v| {
+                        let mut pair = KeyValuePair::new(
+                            v.get("key").and_then(|v| v.as_str()).unwrap_or("").into(),
+                            v.get("value").and_then(|v| v.as_str()).unwrap_or("").into(),
+                            v.get("disabled").and_then(|v| v.as_bool()) != Some(true)
+                                && v.get("enabled").and_then(|v| v.as_bool()) != Some(false),
+                        );
+                        pair.value_type =
+                            v.get("type").and_then(|v| v.as_str()).map(str::to_string);
+                        pair
+                    })
+                    .collect(),
+                "urlencoded" => url::form_urlencoded::parse(b.content.as_bytes())
+                    .map(|(k, v)| KeyValuePair::new(k.into_owned(), v.into_owned(), true))
+                    .collect(),
+                _ => vec![],
+            },
         }
     });
 

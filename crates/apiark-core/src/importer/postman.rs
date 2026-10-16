@@ -20,6 +20,12 @@ pub fn parse_postman(content: &str) -> Result<ImportData, String> {
         .to_string();
 
     let mut warnings = Vec::new();
+    audit(&root, &mut warnings)?;
+    let mut metadata = root.clone();
+    metadata
+        .as_object_mut()
+        .ok_or("Collection must be an object")?
+        .remove("item");
 
     let items = root
         .get("item")
@@ -34,7 +40,11 @@ pub fn parse_postman(content: &str) -> Result<ImportData, String> {
         for var in vars {
             if let (Some(key), Some(value)) = (
                 var.get("key").and_then(|v| v.as_str()),
-                var.get("value").and_then(|v| v.as_str()),
+                var.get("value").map(|v| {
+                    v.as_str()
+                        .map(str::to_string)
+                        .unwrap_or_else(|| v.to_string())
+                }),
             ) {
                 variables.insert(key.to_string(), value.to_string());
             }
@@ -48,6 +58,7 @@ pub fn parse_postman(content: &str) -> Result<ImportData, String> {
     }
 
     Ok(ImportData {
+        postman: Some(metadata),
         collection_name,
         items,
         environments,
@@ -72,13 +83,21 @@ fn parse_item(item: &Value, warnings: &mut Vec<ImportWarning>) -> Option<ImportI
     // If it has nested "item", it's a folder
     if let Some(children) = item.get("item").and_then(|v| v.as_array()) {
         return Some(ImportItem::Folder {
+            postman: Some(item.clone()),
             name,
             items: parse_items(children, warnings),
         });
     }
 
     // Otherwise it should have a "request" field
-    let req = item.get("request")?;
+    let raw_request = item.get("request")?;
+    let normalized;
+    let req = if raw_request.is_string() {
+        normalized = serde_json::json!({"method":"GET","url":raw_request});
+        &normalized
+    } else {
+        raw_request
+    };
 
     let method = req
         .get("method")
@@ -136,8 +155,14 @@ fn parse_item(item: &Value, warnings: &mut Vec<ImportWarning>) -> Option<ImportI
                     });
                 }
                 match listen {
-                    "prerequest" => pre_request_script = Some(src),
-                    "test" => tests = Some(src),
+                    "prerequest" => {
+                        let previous = pre_request_script.take().unwrap_or_default();
+                        pre_request_script = Some(format!("{previous}\n{src}"));
+                    }
+                    "test" => {
+                        let previous = tests.take().unwrap_or_default();
+                        tests = Some(format!("{previous}\n{src}"));
+                    }
                     _ => {}
                 }
             }
@@ -145,6 +170,7 @@ fn parse_item(item: &Value, warnings: &mut Vec<ImportWarning>) -> Option<ImportI
     }
 
     Some(ImportItem::Request {
+        postman: Some(item.clone()),
         name,
         method,
         url,
@@ -163,7 +189,7 @@ fn parse_item(item: &Value, warnings: &mut Vec<ImportWarning>) -> Option<ImportI
     })
 }
 
-fn parse_url(url_val: Option<&Value>) -> (String, HashMap<String, String>) {
+pub(crate) fn parse_url(url_val: Option<&Value>) -> (String, HashMap<String, String>) {
     let empty_vars = HashMap::new();
     match url_val {
         None => (String::new(), empty_vars),
@@ -196,44 +222,85 @@ fn parse_url(url_val: Option<&Value>) -> (String, HashMap<String, String>) {
                 // Reconstruct from parts
                 let host = v
                     .get("host")
-                    .and_then(|h| h.as_array())
-                    .map(|parts| {
-                        parts
-                            .iter()
-                            .filter_map(|p| p.as_str())
-                            .collect::<Vec<_>>()
-                            .join(".")
-                    })
-                    .unwrap_or_default();
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+                    .unwrap_or_else(|| {
+                        v.get("host")
+                            .and_then(|h| h.as_array())
+                            .map(|parts| {
+                                parts
+                                    .iter()
+                                    .filter_map(|p| p.as_str())
+                                    .collect::<Vec<_>>()
+                                    .join(".")
+                            })
+                            .unwrap_or_default()
+                    });
 
                 let path = v
                     .get("path")
-                    .and_then(|p| p.as_array())
-                    .map(|parts| {
-                        parts
-                            .iter()
-                            .filter_map(|p| p.as_str())
-                            .collect::<Vec<_>>()
-                            .join("/")
-                    })
-                    .unwrap_or_default();
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+                    .unwrap_or_else(|| {
+                        v.get("path")
+                            .and_then(|p| p.as_array())
+                            .map(|parts| {
+                                parts
+                                    .iter()
+                                    .filter_map(|p| p.as_str())
+                                    .collect::<Vec<_>>()
+                                    .join("/")
+                            })
+                            .unwrap_or_default()
+                    });
 
                 let protocol = v
                     .get("protocol")
                     .and_then(|p| p.as_str())
                     .unwrap_or("https");
 
-                format!("{protocol}://{host}/{path}")
+                let port = v
+                    .get("port")
+                    .and_then(Value::as_str)
+                    .map(|p| format!(":{p}"))
+                    .unwrap_or_default();
+                format!("{protocol}://{host}{port}/{}", path.trim_start_matches('/'))
             };
 
             // Keep :paramName placeholders in the URL — path variable values are
             // stored separately in the params field so the UI can display and edit them.
+            let url = if let Some(query) = v.get("query").and_then(|q| q.as_array()) {
+                let mut serializer = url::form_urlencoded::Serializer::new(String::new());
+                for entry in query
+                    .iter()
+                    .filter(|e| e.get("disabled").and_then(Value::as_bool) != Some(true))
+                {
+                    if let Some(key) = entry.get("key").and_then(Value::as_str) {
+                        serializer.append_pair(
+                            key,
+                            entry.get("value").and_then(Value::as_str).unwrap_or(""),
+                        );
+                    }
+                }
+                let query = serializer
+                    .finish()
+                    .replace("%7B%7B", "{{")
+                    .replace("%7D%7D", "}}");
+                let raw = url.split_once('?').map(|(base, _)| base).unwrap_or(&url);
+                if query.is_empty() {
+                    raw.to_string()
+                } else {
+                    format!("{raw}?{query}")
+                }
+            } else {
+                url
+            };
             (url, path_variables)
         }
     }
 }
 
-fn parse_headers(headers_val: Option<&Value>) -> HashMap<String, String> {
+pub(crate) fn parse_headers(headers_val: Option<&Value>) -> HashMap<String, String> {
     let mut map = HashMap::new();
     if let Some(arr) = headers_val.and_then(|v| v.as_array()) {
         for h in arr {
@@ -245,6 +312,7 @@ fn parse_headers(headers_val: Option<&Value>) -> HashMap<String, String> {
                 if h.get("disabled").and_then(|v| v.as_bool()).unwrap_or(false) {
                     continue;
                 }
+                map.retain(|existing: &String, _| !existing.eq_ignore_ascii_case(key));
                 map.insert(key.to_string(), value.to_string());
             }
         }
@@ -252,7 +320,7 @@ fn parse_headers(headers_val: Option<&Value>) -> HashMap<String, String> {
     map
 }
 
-fn parse_body(body_val: Option<&Value>) -> Option<ImportBody> {
+pub(crate) fn parse_body(body_val: Option<&Value>) -> Option<ImportBody> {
     let body = body_val?;
     let mode = body.get("mode").and_then(|v| v.as_str())?;
 
@@ -265,7 +333,7 @@ fn parse_body(body_val: Option<&Value>) -> Option<ImportBody> {
                 .and_then(|o| o.get("raw"))
                 .and_then(|r| r.get("language"))
                 .and_then(|l| l.as_str())
-                .unwrap_or("json");
+                .unwrap_or("text");
 
             let body_type = match lang {
                 "json" => "json",
@@ -283,13 +351,22 @@ fn parse_body(body_val: Option<&Value>) -> Option<ImportBody> {
             let content = pairs
                 .map(|arr| {
                     arr.iter()
+                        .filter(|p| p.get("disabled").and_then(Value::as_bool) != Some(true))
                         .filter_map(|p| {
                             let key = p.get("key").and_then(|v| v.as_str())?;
                             let val = p.get("value").and_then(|v| v.as_str()).unwrap_or("");
-                            Some(format!("{key}={val}"))
+                            Some((key.to_string(), val.to_string()))
                         })
                         .collect::<Vec<_>>()
-                        .join("&")
+                        .into_iter()
+                        .fold(
+                            url::form_urlencoded::Serializer::new(String::new()),
+                            |mut s, (k, v)| {
+                                s.append_pair(&k, &v);
+                                s
+                            },
+                        )
+                        .finish()
                 })
                 .unwrap_or_default();
 
@@ -299,22 +376,9 @@ fn parse_body(body_val: Option<&Value>) -> Option<ImportBody> {
             })
         }
         "formdata" => {
-            let pairs = body.get("formdata").and_then(|v| v.as_array());
-            // Store as JSON array for form-data
-            let content = pairs
-                .map(|arr| {
-                    let items: Vec<serde_json::Value> = arr
-                        .iter()
-                        .filter_map(|p| {
-                            let key = p.get("key").and_then(|v| v.as_str())?;
-                            let val = p.get("value").and_then(|v| v.as_str()).unwrap_or("");
-                            Some(serde_json::json!({"key": key, "value": val}))
-                        })
-                        .collect();
-                    serde_json::to_string_pretty(&items).unwrap_or_default()
-                })
-                .unwrap_or_default();
-
+            let content =
+                serde_json::to_string(body.get("formdata").unwrap_or(&Value::Array(vec![])))
+                    .unwrap_or_default();
             Some(ImportBody {
                 body_type: "form-data".to_string(),
                 content,
@@ -324,7 +388,7 @@ fn parse_body(body_val: Option<&Value>) -> Option<ImportBody> {
     }
 }
 
-fn parse_auth(auth_val: Option<&Value>) -> Option<AuthConfig> {
+pub(crate) fn parse_auth(auth_val: Option<&Value>) -> Option<AuthConfig> {
     let auth = auth_val?;
     let auth_type = auth.get("type").and_then(|v| v.as_str())?;
 
@@ -546,5 +610,156 @@ mod tests {
             }
             _ => panic!("expected request"),
         }
+    }
+}
+
+fn audit(value: &Value, warnings: &mut Vec<ImportWarning>) -> Result<(), String> {
+    let name = value
+        .get("name")
+        .or_else(|| value.get("info").and_then(|v| v.get("name")))
+        .and_then(Value::as_str)
+        .unwrap_or("Collection");
+    let mut warn = |message: &str| {
+        warnings.push(ImportWarning {
+            item_name: name.into(),
+            message: message.into(),
+        })
+    };
+    let req = value.get("request").unwrap_or(value);
+    if value.get("info").is_none() && value.get("item").is_none() && value.get("request").is_none()
+    {
+        return Err(format!(
+            "{name}: Missing request or folder items; import aborted"
+        ));
+    }
+    if let Some(body) = req.get("body") {
+        if body
+            .get("urlencoded")
+            .and_then(Value::as_array)
+            .is_some_and(|a| {
+                a.iter()
+                    .any(|v| v.get("disabled").and_then(Value::as_bool) == Some(true))
+            })
+        {
+            warn("Disabled form fields are retained for export and are not sent");
+        }
+    }
+    if let Some(auth) = req.get("auth") {
+        let kind = auth.get("type").and_then(Value::as_str).unwrap_or("");
+        if !matches!(
+            kind,
+            "" | "noauth" | "bearer" | "basic" | "apikey" | "digest" | "awsv4" | "oauth2" | "ntlm"
+        ) {
+            return Err(format!(
+                "{name}: Unsupported authentication {kind}; import aborted without dropping it"
+            ));
+        }
+        if matches!(kind, "digest" | "oauth2" | "ntlm" | "awsv4")
+            && parse_auth(Some(auth)).is_none()
+        {
+            return Err(format!("{name}: Authentication {kind} is not supported by this importer; use Bearer/Basic/API key"));
+        }
+    }
+    if let Some(method) = req.get("method").and_then(Value::as_str) {
+        if !matches!(
+            method,
+            "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS"
+        ) {
+            return Err(format!("{name}: Unsupported HTTP method {method}"));
+        }
+    }
+    if let Some(body) = req.get("body") {
+        let mode = body.get("mode").and_then(Value::as_str).unwrap_or("");
+        if !matches!(mode, "raw" | "urlencoded" | "formdata" | "") {
+            return Err(format!(
+                "{name}: Unsupported body mode {mode}; import aborted"
+            ));
+        }
+        if body
+            .get("formdata")
+            .and_then(Value::as_array)
+            .is_some_and(|a| {
+                a.iter()
+                    .any(|v| v.get("type").and_then(Value::as_str) == Some("file"))
+            })
+        {
+            return Err(format!(
+                "{name}: File form fields require manual attachment; import aborted"
+            ));
+        }
+    }
+    if let Some(headers) = req.get("header").and_then(Value::as_array) {
+        let mut seen = std::collections::HashSet::new();
+        for h in headers {
+            if h.get("disabled").and_then(Value::as_bool) == Some(true) {
+                warn("Disabled headers are retained in Postman metadata; they are not sent");
+            }
+            if let Some(key) = h.get("key").and_then(Value::as_str) {
+                if !seen.insert(key.to_ascii_lowercase()) {
+                    warn("Duplicate headers are retained for export; the YAML runtime uses the last enabled value");
+                }
+            }
+        }
+    }
+    if value
+        .get("event")
+        .and_then(Value::as_array)
+        .is_some_and(|events| {
+            events.iter().any(|e| {
+                !matches!(
+                    e.get("listen").and_then(Value::as_str),
+                    Some("test" | "prerequest")
+                )
+            })
+        })
+    {
+        warn("Unknown script events are retained for export but are unsupported at runtime");
+    }
+    if value.get("response").is_some()
+        || req.get("protocolProfileBehavior").is_some()
+        || value.get("protocolProfileBehavior").is_some()
+    {
+        warn("Saved responses/protocol profile metadata are retained for export and do not affect runtime");
+    }
+    if let Some(events) = value.get("event").and_then(Value::as_array) {
+        for event in events {
+            if event.to_string().contains("pm.") {
+                warn("Scripts use pm.*. They are preserved; rewrite them to ark.* before running");
+                break;
+            }
+        }
+    }
+    if let Some(items) = value.get("item").and_then(Value::as_array) {
+        for item in items {
+            audit(item, warnings)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn scope_script(metadata: &Value, phase: &str) -> Option<String> {
+    let scripts: Vec<_> = metadata
+        .get("event")?
+        .as_array()?
+        .iter()
+        .filter(|e| e.get("listen").and_then(Value::as_str) == Some(phase))
+        .filter_map(|e| e.get("script")?.get("exec"))
+        .filter_map(|e| {
+            if let Some(a) = e.as_array() {
+                Some(
+                    a.iter()
+                        .filter_map(Value::as_str)
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                )
+            } else {
+                e.as_str().map(str::to_string)
+            }
+        })
+        .collect();
+    if scripts.is_empty() {
+        None
+    } else {
+        Some(scripts.join("\n"))
     }
 }

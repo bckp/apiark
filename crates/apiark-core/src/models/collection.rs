@@ -7,6 +7,8 @@ use super::request::HttpMethod;
 /// On-disk collection config (.apiark/apiark.yaml)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollectionConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub postman: Option<serde_json::Value>,
     pub name: String,
     #[serde(default = "default_version")]
     pub version: u32,
@@ -49,6 +51,8 @@ fn default_true() -> bool {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RequestFile {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub postman: Option<serde_json::Value>,
     pub name: String,
     pub method: HttpMethod,
     pub url: String,
@@ -65,7 +69,11 @@ pub struct RequestFile {
     pub body: Option<RequestBodyFile>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub params: Option<HashMap<String, String>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_assertions"
+    )]
     pub assert: Option<serde_yaml::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tests: Option<String>,
@@ -75,6 +83,18 @@ pub struct RequestFile {
     pub post_response_script: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cookies: Option<HashMap<String, String>>,
+}
+
+fn deserialize_assertions<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<serde_yaml::Value>, D::Error> {
+    let value = Option::<serde_yaml::Value>::deserialize(d)?;
+    match value {
+        Some(serde_yaml::Value::String(s)) => serde_yaml::from_str(&s)
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+        other => Ok(other),
+    }
 }
 
 /// Body stored in YAML files
@@ -89,6 +109,8 @@ pub struct RequestBodyFile {
 /// Optional folder config (_folder.yaml)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FolderConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub postman: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -20,6 +20,13 @@ pub fn execute_script(
     // Limit memory to 32MB and max stack size to 1MB
     rt.set_memory_limit(32 * 1024 * 1024);
     rt.set_max_stack_size(1024 * 1024);
+    let rejected = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let rejected_tracker = rejected.clone();
+    rt.set_host_promise_rejection_tracker(Some(Box::new(move |_, _, _, handled| {
+        if !handled {
+            rejected_tracker.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    })));
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
     rt.set_interrupt_handler(Some(Box::new(move || {
         std::time::Instant::now() >= deadline
@@ -61,7 +68,7 @@ pub fn execute_script(
 
         parse_mutations(&result_json, &context)
     });
-    if rt.is_job_pending() {
+    if rt.is_job_pending() || rejected.load(std::sync::atomic::Ordering::Relaxed) {
         return Err("Async scripts and pending Promise jobs are unsupported".into());
     }
     result

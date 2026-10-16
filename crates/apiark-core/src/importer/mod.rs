@@ -15,6 +15,7 @@ use crate::models::auth::AuthConfig;
 /// All importers produce this struct; the writer converts it to disk format.
 #[derive(Debug, Clone)]
 pub struct ImportData {
+    pub postman: Option<serde_json::Value>,
     pub collection_name: String,
     pub items: Vec<ImportItem>,
     pub environments: Vec<ImportEnvironment>,
@@ -24,10 +25,12 @@ pub struct ImportData {
 #[derive(Debug, Clone)]
 pub enum ImportItem {
     Folder {
+        postman: Option<serde_json::Value>,
         name: String,
         items: Vec<ImportItem>,
     },
     Request {
+        postman: Option<serde_json::Value>,
         name: String,
         method: String,
         url: String,

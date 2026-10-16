@@ -261,25 +261,43 @@ fn infinite_scripts_and_async_tests_cannot_pass() {
         "ark.test('async',async ()=>{throw new Error('failure')})",
         context(),
         ScriptPhase::PreRequest,
+    );
+    assert!(result.is_err());
+    assert!(execute_script(
+        "Promise.resolve().then(()=>ark.test('hidden',()=>{throw Error('failure')}))",
+        context(),
+        ScriptPhase::PreRequest
     )
-    .unwrap();
-    assert!(!result.test_results[0].passed);
-    assert!(execute_script("Promise.resolve().then(()=>ark.test('hidden',()=>{throw Error('failure')}))", context(), ScriptPhase::PreRequest).is_err());
-    assert!(execute_script("ark.test('hidden',()=>{Promise.resolve().then(()=>{throw Error('failure')})})", context(), ScriptPhase::PreRequest).is_err());
+    .is_err());
+    assert!(execute_script(
+        "ark.test('hidden',()=>{Promise.resolve().then(()=>{throw Error('failure')})})",
+        context(),
+        ScriptPhase::PreRequest
+    )
+    .is_err());
 }
 
 #[tokio::test]
 async fn explicit_cookies_override_names_without_removing_other_jar_cookies() {
-    let (base, task) = server(Router::new().route("/", get(|headers: axum::http::HeaderMap| async move {
-        headers.get("cookie").unwrap().to_str().unwrap().to_string()
-    }))).await;
-    let jar=CookieJarManager::new();
-    for h in ["sid=old; Path=/","other=retained; Path=/"] {
-        let c=parse_set_cookie_header(h,&url::Url::parse(&base).unwrap()).unwrap();
-        jar.store_cookies("",vec![CookieEntry::from(&c)]).unwrap();
+    let (base, task) = server(Router::new().route(
+        "/",
+        get(|headers: axum::http::HeaderMap| async move {
+            headers.get("cookie").unwrap().to_str().unwrap().to_string()
+        }),
+    ))
+    .await;
+    let jar = CookieJarManager::new();
+    for h in ["sid=old; Path=/", "other=retained; Path=/"] {
+        let c = parse_set_cookie_header(h, &url::Url::parse(&base).unwrap()).unwrap();
+        jar.store_cookies("", vec![CookieEntry::from(&c)]).unwrap();
     }
-    let mut p=params(&base);p.cookies=Some(HashMap::from([("sid".into(),"override".into())]));
-    let response=HttpEngine::send_with_jar(p,&jar,"",&CollectionDefaults::default()).await.unwrap();
-    assert!(response.body.contains("sid=override"));assert!(response.body.contains("other=retained"));assert!(!response.body.contains("sid=old"));
+    let mut p = params(&base);
+    p.cookies = Some(HashMap::from([("sid".into(), "override".into())]));
+    let response = HttpEngine::send_with_jar(p, &jar, "", &CollectionDefaults::default())
+        .await
+        .unwrap();
+    assert!(response.body.contains("sid=override"));
+    assert!(response.body.contains("other=retained"));
+    assert!(!response.body.contains("sid=old"));
     task.abort();
 }

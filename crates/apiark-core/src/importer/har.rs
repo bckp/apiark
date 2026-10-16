@@ -90,6 +90,7 @@ pub fn parse_har(content: &str) -> Result<ImportData, String> {
         let body = parse_post_data(request);
 
         items.push(ImportItem::Request {
+            postman: None,
             name,
             method,
             url,
@@ -112,6 +113,7 @@ pub fn parse_har(content: &str) -> Result<ImportData, String> {
     }
 
     Ok(ImportData {
+        postman: None,
         collection_name: "HAR Import".to_string(),
         items,
         environments: Vec::new(),

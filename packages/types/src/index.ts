@@ -249,6 +249,7 @@ export interface ScriptedResponseData extends ResponseData {
 // ── Request File (on-disk YAML format from Rust) ──
 
 export interface RequestFile {
+  postman?: unknown;
   name: string;
   method: HttpMethod;
   url: string;
@@ -607,6 +608,8 @@ export interface PersistedState {
 // ── Tab ──
 
 export interface Tab {
+  authInherited?: boolean;
+  postman?: unknown;
   id: string;
   name: string;
   filePath: string | null;

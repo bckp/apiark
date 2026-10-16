@@ -97,10 +97,16 @@ pub fn build_url_with_params(
         .map_err(|e| HttpEngineError::InvalidUrl(format!("{}: {}", e, base_url)))?;
 
     // Add enabled query params
+    let existing: std::collections::HashSet<_> = url
+        .query_pairs()
+        .map(|(k, v)| (k.into_owned(), v.into_owned()))
+        .collect();
     {
         let mut query_pairs = url.query_pairs_mut();
         for param in params.iter().filter(|p| p.enabled && !p.key.is_empty()) {
-            query_pairs.append_pair(&param.key, &param.value);
+            if !existing.contains(&(param.key.clone(), param.value.clone())) {
+                query_pairs.append_pair(&param.key, &param.value);
+            }
         }
 
         // Add API key to query if configured

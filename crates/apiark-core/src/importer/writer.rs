@@ -21,6 +21,8 @@ pub fn write_import(data: &ImportData, target_dir: &Path) -> Result<String, Stri
         ));
     }
 
+    fs::create_dir(&collection_dir).map_err(|e| format!("Cannot create collection: {e}"))?;
+
     // Create collection structure
     let apiark_dir = collection_dir.join(".apiark");
     fs::create_dir_all(&apiark_dir)
@@ -28,9 +30,16 @@ pub fn write_import(data: &ImportData, target_dir: &Path) -> Result<String, Stri
 
     // Write apiark.yaml
     let config = CollectionConfig {
+        postman: data.postman.clone(),
         name: data.collection_name.clone(),
         version: 1,
-        defaults: CollectionDefaults::default(),
+        defaults: CollectionDefaults {
+            auth: data
+                .postman
+                .as_ref()
+                .and_then(|v| super::postman::parse_auth(v.get("auth"))),
+            ..CollectionDefaults::default()
+        },
     };
     let config_yaml =
         serde_yaml::to_string(&config).map_err(|e| format!("Failed to serialize config: {e}"))?;
@@ -70,16 +79,35 @@ fn write_items(items: &[ImportItem], parent_dir: &Path) -> Result<(), String> {
     // Track filenames for collision avoidance
     let mut used_names: HashMap<String, usize> = HashMap::new();
 
+    let mut order = Vec::new();
     for item in items {
         match item {
-            ImportItem::Folder { name, items } => {
+            ImportItem::Folder {
+                name,
+                items,
+                postman,
+            } => {
                 let dirname = unique_name(&sanitize_filename(name), &mut used_names);
+                order.push(dirname.clone());
                 let folder_path = parent_dir.join(&dirname);
                 fs::create_dir_all(&folder_path)
                     .map_err(|e| format!("Failed to create folder: {e}"))?;
+                let config = crate::models::collection::FolderConfig {
+                    postman: postman.clone(),
+                    name: Some(name.clone()),
+                    auth: postman
+                        .as_ref()
+                        .and_then(|v| super::postman::parse_auth(v.get("auth"))),
+                    order: vec![],
+                };
+                atomic_write(
+                    &folder_path.join("_folder.yaml"),
+                    &serde_yaml::to_string(&config).map_err(|e| e.to_string())?,
+                )?;
                 write_items(items, &folder_path)?;
             }
             ImportItem::Request {
+                postman,
                 name,
                 method,
                 url,
@@ -93,8 +121,10 @@ fn write_items(items: &[ImportItem], parent_dir: &Path) -> Result<(), String> {
                 tests,
             } => {
                 let filename = unique_name(&sanitize_filename(name), &mut used_names);
+                order.push(filename.clone());
 
                 let request_file = RequestFile {
+                    postman: postman.clone(),
                     name: name.clone(),
                     method: parse_method(method),
                     url: url.clone(),
@@ -117,6 +147,25 @@ fn write_items(items: &[ImportItem], parent_dir: &Path) -> Result<(), String> {
             }
         }
     }
+    let path = parent_dir.join("_folder.yaml");
+    let mut config = if path.exists() {
+        serde_yaml::from_str::<crate::models::collection::FolderConfig>(
+            &fs::read_to_string(&path).map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())?
+    } else {
+        crate::models::collection::FolderConfig {
+            postman: None,
+            name: None,
+            auth: None,
+            order: vec![],
+        }
+    };
+    config.order = order;
+    atomic_write(
+        &path,
+        &serde_yaml::to_string(&config).map_err(|e| e.to_string())?,
+    )?;
     Ok(())
 }
 
@@ -135,7 +184,7 @@ fn parse_method(method: &str) -> HttpMethod {
 
 fn convert_auth(auth: &Option<AuthConfig>) -> Option<AuthConfig> {
     match auth {
-        Some(AuthConfig::None) => None,
+        Some(AuthConfig::None) => Some(AuthConfig::None),
         other => other.clone(),
     }
 }
@@ -175,13 +224,13 @@ fn sanitize_filename(name: &str) -> String {
 
 /// Ensure unique name within a directory by appending -1, -2, etc.
 fn unique_name(base: &str, used: &mut HashMap<String, usize>) -> String {
-    let count = used.entry(base.to_string()).or_insert(0);
-    let name = if *count == 0 {
-        base.to_string()
-    } else {
-        format!("{base}-{count}")
-    };
-    *count += 1;
+    let mut name = base.to_string();
+    let mut index = 1;
+    while used.contains_key(&name) {
+        name = format!("{base}-{index}");
+        index += 1;
+    }
+    used.insert(name.clone(), 1);
     name
 }
 
