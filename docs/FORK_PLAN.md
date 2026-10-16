@@ -44,6 +44,16 @@ MIT licence a copyright zůstávají zachované.
   ošetřit chybějící argument, nikoli slepě převzít patch.
 - Ostatní PR nejsou převzaté; před případným použitím načíst celý diff.
 
+## Stav po implementaci
+
+Pořadí výše bylo provedeno v průběžných commitech. #120 má vlastní opravu,
+celé diffy #44/#49/#39 byly také zkontrolované a nahrazené menší společnou
+implementací nebo ponechaným dialogem. Podrobné výsledky, artefakty,
+omezení a ruční kroky jsou v [HANDOFF.md](HANDOFF.md).
+CI je připravená, hostované běhy a podpis/notarizace nejsou hotové.
+Původní statická zjištění byla opravena s regresními testy; nejde o tvrzení
+úplné bezpečnosti všech cest. Soukromé kolekce nebyly prohlížené.
+
 ## Ochrana dat
 
 Nekontrolovat obsah skutečných credentialů ani kolekcí mimo repozitář.

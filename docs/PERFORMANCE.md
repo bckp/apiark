@@ -36,6 +36,7 @@ pnpm --filter @apiark/desktop build
 | původní desktop | 4690.04 kB | 1228.17 kB | 10.12 s |
 | zmenšený desktop, editor eager | 4537.42 kB | 1196.90 kB | 9.19 s |
 | zmenšený desktop, editor lazy | 702.84 kB | 205.20 kB | 8.97 s |
+| finální build, včetně izolace prostředí | 654.05 kB | 192.35 kB | 8.73 s |
 
 Vstupní chunk se oproti baseline zmenšil o 85 %. Editor se načte při prvním
 zobrazení těla, odpovědi nebo skriptu; jeho samostatný chunk má 3827.40 kB
