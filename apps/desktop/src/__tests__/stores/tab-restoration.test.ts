@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { loadPersistedState, readRequestFile } from "@/lib/tauri-api";
+import {
+  loadPersistedState,
+  readRequestFile,
+  savePersistedState,
+} from "@/lib/tauri-api";
 
 vi.mock("@/lib/tauri-api", () => ({
   loadPersistedState: vi.fn(),
   readRequestFile: vi.fn(),
+  savePersistedState: vi.fn(),
 }));
 vi.mock("@/stores/collection-store", () => ({
   useCollectionStore: {
@@ -45,6 +50,8 @@ describe("Session restoration", () => {
     const first = useTabStore.getState().restoreTabs();
     const second = useTabStore.getState().restoreTabs();
     expect(first).toBe(second);
+    useTabStore.getState().persistTabs();
+    expect(savePersistedState).not.toHaveBeenCalled();
     finish(
       persisted(
         ["/synthetic/a.yaml", "/synthetic/a.yaml", "/synthetic/b.yaml"],

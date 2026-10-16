@@ -92,6 +92,7 @@ interface TabState {
 const requestRuns = new Map<string, string>();
 // Share the actual completion promise across StrictMode mounts and retries.
 let restoration: Promise<void> | undefined;
+let restoring = false;
 let tabCounter = 0;
 function generateTabId(): string {
   return `tab_${Date.now()}_${++tabCounter}`;
@@ -991,6 +992,8 @@ export const useTabStore = create<TabState>((set, get) => ({
   },
 
   persistTabs: () => {
+    // Never replace the saved session with a partially restored tab list.
+    if (restoring) return;
     const { tabs, activeTabId } = get();
     // Persist file-backed tabs, deduplicated by path.
     const seen = new Set<string>();
@@ -1051,6 +1054,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
   restoreTabs: () => {
     if (restoration) return restoration;
+    restoring = true;
     restoration = (async () => {
       try {
         const persisted = await loadPersistedState();
@@ -1066,25 +1070,10 @@ export const useTabStore = create<TabState>((set, get) => ({
           }
         }
 
-        if (persisted.tabs.length === 0) {
-          // No tabs to restore, but still re-open collections
-          if (collectionPaths.size > 0) {
-            import("@/stores/collection-store").then(
-              ({ useCollectionStore }) => {
-                for (const path of collectionPaths) {
-                  useCollectionStore
-                    .getState()
-                    .openCollection(path)
-                    .catch(() => {});
-                }
-              },
-            );
-          }
-          return;
-        }
         const seenPaths = new Set(get().tabs.map((tab) => tab.filePath));
 
         for (const pt of persisted.tabs) {
+          if (pt.collectionPath) collectionPaths.add(pt.collectionPath);
           // Deduplicate — only restore one tab per file path
           if (seenPaths.has(pt.filePath)) continue;
           seenPaths.add(pt.filePath);
@@ -1123,14 +1112,14 @@ export const useTabStore = create<TabState>((set, get) => ({
         // Re-open collections in the sidebar (persisted collections were
         // already added above; this also includes any from open tabs).
         if (collectionPaths.size > 0) {
-          import("@/stores/collection-store").then(({ useCollectionStore }) => {
-            for (const path of collectionPaths) {
-              useCollectionStore
-                .getState()
-                .openCollection(path)
-                .catch(() => {});
-            }
-          });
+          const { useCollectionStore } = await import(
+            "@/stores/collection-store"
+          );
+          await Promise.allSettled(
+            [...collectionPaths].map((path) =>
+              useCollectionStore.getState().openCollection(path),
+            ),
+          );
         }
       } catch {
         restoration = undefined;
@@ -1141,6 +1130,8 @@ export const useTabStore = create<TabState>((set, get) => ({
               "Some tabs could not be restored from your last session.",
             ),
         );
+      } finally {
+        restoring = false;
       }
     })();
     return restoration;
