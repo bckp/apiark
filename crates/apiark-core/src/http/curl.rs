@@ -61,6 +61,14 @@ pub fn parse_curl(input: &str) -> Result<ParsedCurlRequest, String> {
             "-k" | "--insecure" => {
                 verify_ssl = false;
             }
+            "-b" | "--cookie" => {
+                i += 1;
+                let value = tokens.get(i).ok_or("Missing cookie value after -b/--cookie")?;
+                insert_literal_cookie(&mut headers, value)?;
+            }
+            value if value.starts_with("--cookie=") => {
+                insert_literal_cookie(&mut headers, &value[9..])?;
+            }
             "-L" | "--location" => {
                 follow_redirects = true;
             }
@@ -122,6 +130,14 @@ pub fn parse_curl(input: &str) -> Result<ParsedCurlRequest, String> {
         verify_ssl,
         follow_redirects,
     })
+}
+
+fn insert_literal_cookie(headers:&mut HashMap<String,String>,value:&str)->Result<(),String> {
+    if !value.is_empty() && (!value.contains('=') || value.starts_with('@')) {
+        return Err("cURL cookie files are unsupported. Paste literal name=value cookies; no file is read.".into());
+    }
+    headers.retain(|key,_|!key.eq_ignore_ascii_case("cookie"));
+    headers.insert("Cookie".into(),value.into());Ok(())
 }
 
 /// Export request parameters to a cURL command string.
@@ -204,6 +220,15 @@ fn tokenize(input: &str) -> Result<Vec<String>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cookie_flags_preserve_literals_and_reject_missing_values_or_files() {
+        for flag in ["-b 'sid=synthetic; theme=dark'", "--cookie 'sid=synthetic; theme=dark'", "--cookie='sid=synthetic; theme=dark'"] {
+            let parsed=parse_curl(&format!("curl https://example.test {flag} -H 'Accept: application/json'")).unwrap();
+            assert_eq!(parsed.headers["Cookie"],"sid=synthetic; theme=dark");assert_eq!(parsed.headers["Accept"],"application/json");
+        }
+        for input in ["curl https://example.test -b", "curl https://example.test -b cookies.txt", "curl https://example.test --cookie @cookies.txt"] { assert!(parse_curl(input).is_err()); }
+    }
 
     #[test]
     fn test_simple_get() {
