@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useActiveTab, useTabStore } from "@/stores/tab-store";
+import { useActiveTab } from "@/stores/tab-store";
 import { AlertCircle, ClipboardCopy, Download, Check, ArrowLeftRight, BookmarkPlus } from "lucide-react";
 import { useDiffStore } from "@/stores/diff-store";
 import { EmptyState, RocketIcon } from "@/components/ui/empty-state";
@@ -9,7 +9,6 @@ import { CodeGenerationPanel } from "./code-generation-panel";
 import { TestResultsPanel } from "./test-results-panel";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { readFullResponse } from "@/lib/tauri-api";
 import type { ConsoleEntry } from "@apiark/types";
 import { TimingPanel } from "./timing-panel";
 import { CodeEditor } from "@/components/ui/code-editor";
@@ -145,7 +144,6 @@ export function ResponsePanel() {
           return (
             <>
               <ResponseBodyActions body={formattedBody} />
-              {response.truncated && <TruncationBanner response={response} />}
               <div className="min-h-0 flex-1">
                 <CodeEditor
                   value={formattedBody}
@@ -408,43 +406,6 @@ function ConsolePanel({ entries }: { entries: ConsoleEntry[] }) {
   );
 }
 
-function TruncationBanner({ response }: { response: { truncated?: boolean; fullSize?: number; tempPath?: string } }) {
-  const [loading, setLoading] = useState(false);
-  const tab = useActiveTab();
-
-  const handleLoadFull = async () => {
-    if (!response.tempPath || !tab) return;
-    setLoading(true);
-    try {
-      const fullBody = await readFullResponse(response.tempPath);
-      // Update the tab's response body in-place
-      useTabStore.getState().updateResponse(tab.id, { body: fullBody, truncated: false });
-    } catch (err) {
-      import("@/stores/toast-store").then(({ useToastStore }) =>
-        useToastStore.getState().showError(`Failed to load full response: ${err}`),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="mb-2 flex items-center gap-2 rounded bg-yellow-500/10 px-3 py-2 text-xs text-yellow-400">
-      <span>
-        Response truncated (showing 1 MB of {formatSize(response.fullSize ?? 0)}).
-      </span>
-      {response.tempPath && (
-        <button
-          onClick={handleLoadFull}
-          disabled={loading}
-          className="rounded bg-yellow-500/20 px-2 py-0.5 font-medium hover:bg-yellow-500/30 disabled:opacity-50"
-        >
-          {loading ? "Loading..." : "Load Full Response"}
-        </button>
-      )}
-    </div>
-  );
-}
 
 function tryFormatBody(body: string, language: string): string {
   if (language === "json") {

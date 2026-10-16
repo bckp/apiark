@@ -23,10 +23,6 @@ pub struct AppSettings {
     pub timeout_ms: u64,
     #[serde(default = "default_sidebar_width")]
     pub sidebar_width: u32,
-    #[serde(default)]
-    pub onboarding_complete: bool,
-    #[serde(default)]
-    pub crash_reports_enabled: Option<bool>,
     /// Path to a custom CA certificate (PEM format)
     #[serde(default)]
     pub ca_cert_path: Option<String>,
@@ -39,18 +35,6 @@ pub struct AppSettings {
     /// Passphrase for PFX/PKCS12 client certificates
     #[serde(default)]
     pub client_cert_passphrase: Option<String>,
-    /// Update channel: "stable", "beta", or "nightly"
-    #[serde(default = "default_update_channel")]
-    pub update_channel: String,
-    /// AI assistant: OpenAI-compatible API endpoint
-    #[serde(default)]
-    pub ai_endpoint: Option<String>,
-    /// AI assistant: API key
-    #[serde(default)]
-    pub ai_api_key: Option<String>,
-    /// AI assistant: model name
-    #[serde(default)]
-    pub ai_model: Option<String>,
     /// Request/Response panel split ratio (0.0-1.0, proportion for request panel)
     #[serde(default = "default_panel_ratio")]
     pub panel_ratio: f64,
@@ -79,10 +63,6 @@ fn default_sidebar_width() -> u32 {
     256
 }
 
-fn default_update_channel() -> String {
-    "stable".to_string()
-}
-
 fn default_panel_ratio() -> f64 {
     0.5
 }
@@ -103,16 +83,10 @@ impl Default for AppSettings {
             follow_redirects: true,
             timeout_ms: default_timeout(),
             sidebar_width: default_sidebar_width(),
-            onboarding_complete: false,
-            crash_reports_enabled: None,
             ca_cert_path: None,
             client_cert_path: None,
             client_key_path: None,
             client_cert_passphrase: None,
-            update_channel: default_update_channel(),
-            ai_endpoint: None,
-            ai_api_key: None,
-            ai_model: None,
             panel_ratio: default_panel_ratio(),
             layout: default_layout(),
         }

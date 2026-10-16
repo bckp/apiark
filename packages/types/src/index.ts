@@ -316,74 +316,15 @@ export interface AppSettings {
   followRedirects: boolean;
   timeoutMs: number;
   sidebarWidth: number;
-  onboardingComplete: boolean;
-  crashReportsEnabled: boolean | null;
   caCertPath: string | null;
   clientCertPath: string | null;
   clientKeyPath: string | null;
   clientCertPassphrase: string | null;
-  updateChannel: "stable" | "beta" | "nightly";
-  aiEndpoint: string | null;
-  aiApiKey: string | null;
-  aiModel: string | null;
   panelRatio: number;
   layout: "horizontal" | "vertical" | "tabbed";
 }
 
-// ── Tab Protocol ──
-
-export type TabProtocol = "http" | "graphql" | "websocket" | "sse" | "grpc" | "mqtt" | "socketio";
-
-export interface GraphQLState {
-  query: string;
-  variables: string;
-  operationName: string;
-  schemaJson: string | null;
-}
-
-// ── WebSocket ──
-
-export interface WsConnectParams {
-  url: string;
-  headers: KeyValuePair[];
-  protocols: string[];
-}
-
-export interface WsMessage {
-  connectionId: string;
-  direction: "sent" | "received";
-  content: string;
-  messageType: "text" | "binary";
-  timestamp: string;
-  sizeBytes: number;
-}
-
-export interface WsStatus {
-  connectionId: string;
-  state: "connecting" | "connected" | "disconnected";
-  error?: string;
-}
-
-// ── SSE ──
-
-export interface SseConnectParams {
-  url: string;
-  headers: KeyValuePair[];
-}
-
-export interface SseEvent {
-  connectionId: string;
-  eventType: string;
-  data: string;
-  id?: string;
-  timestamp: string;
-}
-
-export interface SseStatus {
-  connectionId: string;
-  state: "connecting" | "connected" | "disconnected";
-  error?: string;
-}
+export type TabProtocol = "http";
 
 // ── Collection Runner ──
 
@@ -447,120 +388,8 @@ export interface ImportWarning {
   message: string;
 }
 
-export type ImportFormat = "postman" | "insomnia" | "bruno" | "openapi" | "hoppscotch" | "har";
-export type ExportFormat = "postman" | "openapi" | "apiark" | "bruno" | "insomnia";
-
-// ── gRPC ──
-
-export interface GrpcServiceInfo {
-  name: string;
-  fullName: string;
-  methods: GrpcMethodInfo[];
-}
-
-export interface GrpcMethodInfo {
-  name: string;
-  fullName: string;
-  inputType: string;
-  outputType: string;
-  callType: "unary" | "serverStreaming" | "clientStreaming" | "bidiStreaming";
-}
-
-export interface GrpcResponse {
-  statusCode: number;
-  statusMessage: string;
-  body: string;
-  timeMs: number;
-  metadata: GrpcMetadataEntry[];
-}
-
-export interface GrpcMetadataEntry {
-  key: string;
-  value: string;
-}
-
-export interface GrpcState {
-  services: GrpcServiceInfo[];
-  selectedService: string | null;
-  selectedMethod: string | null;
-  requestJson: string;
-  metadata: KeyValuePair[];
-  response: GrpcResponse | null;
-  loading: boolean;
-  error: string | null;
-}
-
-// ── API Docs ──
-
-export type DocsFormat = "html" | "markdown";
-
-// ── Monitor / Scheduler ──
-
-export interface MonitorConfig {
-  name: string;
-  collectionPath: string;
-  folderPath?: string;
-  environmentName?: string;
-  cronExpression: string;
-  notifyOnFailure: boolean;
-  webhookUrl?: string;
-}
-
-export interface MonitorStatus {
-  id: string;
-  name: string;
-  collectionPath: string;
-  cronExpression: string;
-  enabled: boolean;
-  lastRun?: string;
-  lastStatus?: string;
-  runCount: number;
-}
-
-export interface MonitorResult {
-  id: number;
-  monitorId: string;
-  timestamp: string;
-  totalRequests: number;
-  totalPassed: number;
-  totalFailed: number;
-  totalTimeMs: number;
-  status: string;
-  error?: string;
-}
-
-// ── Mock Server ──
-
-export interface MockServerConfig {
-  collectionPath: string;
-  port: number;
-  latencyMs: number;
-  errorRate: number;
-}
-
-export interface MockEndpoint {
-  method: string;
-  path: string;
-  status: number;
-  body: string;
-  contentType: string;
-}
-
-export interface MockServerStatus {
-  id: string;
-  collectionName: string;
-  port: number;
-  endpoints: MockEndpoint[];
-  running: boolean;
-}
-
-export interface MockRequestLog {
-  method: string;
-  path: string;
-  status: number;
-  timeMs: number;
-  timestamp: string;
-}
+export type ImportFormat = "postman";
+export type ExportFormat = "postman";
 
 // ── Cookie Jar ──
 
@@ -618,10 +447,8 @@ export interface Tab {
   protocol: TabProtocol;
 
   // GraphQL state (when protocol === "graphql")
-  graphql: GraphQLState | null;
 
   // gRPC state (when protocol === "grpc")
-  grpc: GrpcState | null;
 
   // Request state
   method: HttpMethod;

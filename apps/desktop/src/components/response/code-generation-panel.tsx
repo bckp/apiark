@@ -19,37 +19,11 @@ function resolveVariables(str: string, vars: Record<string, string>): string {
   return str.replace(/\{\{([\w$]+)\}\}/g, (_, name) => vars[name] ?? `{{${name}}}`);
 }
 
-/** Replace :paramName path variables in a URL with their values */
-function resolvePathVariables(url: string, pathVars: Record<string, string>): string {
-  let resolved = url;
-  for (const [key, value] of Object.entries(pathVars)) {
-    if (value) {
-      resolved = resolved.replace(new RegExp(`:${key}\\b`, "g"), encodeURIComponent(value));
-    }
-  }
-  return resolved;
-}
+import {resolvePathVariables} from "@/lib/url-params";
 
 /** Create a copy of the tab with all variables resolved */
 function resolveTab(tab: Tab, vars: Record<string, string>): Tab {
-  // For GraphQL tabs, build the JSON body from tab.graphql
-  let body = tab.body;
-  let method = tab.method;
-  let headers = tab.headers;
-  if (tab.protocol === "graphql" && tab.graphql) {
-    method = "POST";
-    const gqlBody: Record<string, unknown> = { query: tab.graphql.query };
-    try {
-      const v = JSON.parse(tab.graphql.variables);
-      if (Object.keys(v).length > 0) gqlBody.variables = v;
-    } catch { /* ignore */ }
-    if (tab.graphql.operationName) gqlBody.operationName = tab.graphql.operationName;
-    body = { type: "json", content: JSON.stringify(gqlBody, null, 2), formData: [] };
-    // Ensure Content-Type header
-    if (!headers.some((h) => h.key.toLowerCase() === "content-type" && h.enabled)) {
-      headers = [{ id: "ct", key: "Content-Type", value: "application/json", enabled: true }, ...headers];
-    }
-  }
+  const {body,method,headers}=tab;
 
   return {
     ...tab,

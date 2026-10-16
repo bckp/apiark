@@ -12,25 +12,16 @@ import { useSettingsStore } from "@/stores/settings-store";
 import type { EnvironmentData, CollectionNode } from "@apiark/types";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { ActivityView } from "./activity-bar";
-import { ProxySidePanel as ProxySidePanelView } from "@/components/proxy/proxy-panel";
-import { GitPanel as GitPanelView } from "@/components/git/git-panel";
-import { AuditPanel } from "@/components/audit/audit-panel";
 
 interface SidePanelProps {
   activeView: ActivityView;
   envSelectorRef?: React.RefObject<HTMLSelectElement | null>;
-  onOpenMock?: () => void;
-  onOpenMonitor?: () => void;
-  onOpenDocs?: () => void;
   onOpenImport?: () => void;
 }
 
 export function SidePanel({
   activeView,
   envSelectorRef,
-  onOpenMock,
-  onOpenMonitor,
-  onOpenDocs,
   onOpenImport,
 }: SidePanelProps) {
   const { t } = useTranslation();
@@ -38,12 +29,6 @@ export function SidePanel({
     collections: t("sidebar.collections"),
     environments: t("sidebar.environments"),
     history: t("history.title"),
-    mock: t("mock.title"),
-    monitor: t("monitor.title"),
-    docs: t("docs.title"),
-    proxy: "Proxy Capture",
-    git: "Git",
-    audit: t("audit.title"),
   };
 
   const sidebarWidth = useSettingsStore((s) => s.settings.sidebarWidth);
@@ -65,12 +50,6 @@ export function SidePanel({
         {activeView === "collections" && <CollectionsPanel onOpenImport={onOpenImport} />}
         {activeView === "environments" && <EnvironmentsPanel envSelectorRef={envSelectorRef} />}
         {activeView === "history" && <HistoryPanel />}
-        {activeView === "mock" && <ToolPanel description={t("mock.createDesc")} actionLabel={t("mock.newMockServer")} onAction={onOpenMock} />}
-        {activeView === "monitor" && <ToolPanel description={t("monitor.createDesc")} actionLabel={t("monitor.newMonitor")} onAction={onOpenMonitor} />}
-        {activeView === "docs" && <ToolPanel description={t("docs.generateDesc")} actionLabel={t("docs.generateDocs")} onAction={onOpenDocs} />}
-        {activeView === "proxy" && <ProxySidePanelView />}
-        {activeView === "git" && <GitPanelView />}
-        {activeView === "audit" && <AuditPanel />}
       </div>
     </div>
   );
@@ -1068,24 +1047,3 @@ function NewEnvironmentDialog({
   );
 }
 
-function ToolPanel({
-  description,
-  actionLabel,
-  onAction,
-}: {
-  description: string;
-  actionLabel: string;
-  onAction?: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
-      <p className="text-sm text-[var(--color-text-secondary)]">{description}</p>
-      <button
-        onClick={onAction}
-        className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-xs font-medium text-white transition-all hover:brightness-110 active:scale-[0.98]"
-      >
-        {actionLabel}
-      </button>
-    </div>
-  );
-}

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { HttpMethod, Tab } from "@apiark/types";
 import { useTabStore } from "@/stores/tab-store";
-import { Plus, X, Globe, Zap, Radio, ChevronDown, Pin, Save, Terminal } from "lucide-react";
+import { Plus, X, Globe, ChevronDown, Pin, Save, Terminal } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -29,23 +29,6 @@ const METHOD_COLORS: Record<HttpMethod, string> = {
 };
 
 function TabBadge({ tab }: { tab: Tab }) {
-  const badges: Record<string, { bg: string; label: string }> = {
-    graphql: { bg: "bg-violet-500/15 text-violet-400", label: "GQL" },
-    websocket: { bg: "bg-cyan-500/15 text-cyan-400", label: "WS" },
-    sse: { bg: "bg-orange-500/15 text-orange-400", label: "SSE" },
-    grpc: { bg: "bg-emerald-500/15 text-emerald-400", label: "gRPC" },
-    mqtt: { bg: "bg-purple-500/15 text-purple-400", label: "MQTT" },
-    socketio: { bg: "bg-pink-500/15 text-pink-400", label: "SIO" },
-  };
-
-  if (tab.protocol !== "http") {
-    const badge = badges[tab.protocol];
-    return (
-      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badge?.bg ?? ""}`}>
-        {badge?.label ?? tab.protocol}
-      </span>
-    );
-  }
 
   return (
     <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${METHOD_COLORS[tab.method]}`}>
@@ -189,7 +172,7 @@ function NewTabDropdown() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const { newTab, newGraphQLTab, newWebSocketTab, newSSETab, newGrpcTab, newMqttTab, newSocketIoTab } = useTabStore();
+  const {newTab}=useTabStore();
 
   useEffect(() => {
     if (!open) return;
@@ -204,12 +187,6 @@ function NewTabDropdown() {
 
   const items = [
     { label: t("tabs.httpRequest"), icon: Globe, action: newTab },
-    { label: "GraphQL", icon: Globe, action: newGraphQLTab, color: "text-violet-400" },
-    { label: "WebSocket", icon: Zap, action: newWebSocketTab, color: "text-cyan-400" },
-    { label: "SSE", icon: Radio, action: newSSETab, color: "text-orange-400" },
-    { label: "gRPC", icon: Globe, action: newGrpcTab, color: "text-emerald-400" },
-    { label: "MQTT", icon: Radio, action: newMqttTab, color: "text-purple-400" },
-    { label: "Socket.IO", icon: Zap, action: newSocketIoTab, color: "text-pink-400" },
   ];
 
   return (
@@ -234,7 +211,7 @@ function NewTabDropdown() {
               }}
               className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-accent-glow)]"
             >
-              <item.icon className={`h-4 w-4 ${item.color ?? "text-[var(--color-text-muted)]"}`} />
+              <item.icon className={`h-4 w-4 text-[var(--color-text-muted)]`} />
               {item.label}
             </button>
           ))}

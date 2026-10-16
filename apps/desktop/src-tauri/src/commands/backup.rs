@@ -12,7 +12,7 @@ pub async fn export_app_state(
 ) -> Result<ExportSummary, String> {
     let apiark_dir = dirs::home_dir()
         .ok_or("Could not determine home directory")?
-        .join(".apiark");
+        .join(".apiark-internal");
 
     let file =
         fs::File::create(&output_path).map_err(|e| format!("Failed to create export file: {e}"))?;
@@ -74,7 +74,7 @@ pub async fn export_app_state(
 pub async fn import_app_state(zip_path: String) -> Result<ImportSummary, String> {
     let apiark_dir = dirs::home_dir()
         .ok_or("Could not determine home directory")?
-        .join(".apiark");
+        .join(".apiark-internal");
 
     let _ = fs::create_dir_all(&apiark_dir);
 

@@ -216,7 +216,7 @@ pub fn create_folder(parent: &Path, name: &str) -> Result<PathBuf, String> {
 pub fn delete_item(path: &Path, collection_name: &str) -> Result<String, String> {
     let trash_base = dirs::home_dir()
         .ok_or("Could not determine home directory")?
-        .join(".apiark")
+        .join(".apiark-internal")
         .join("trash")
         .join(collection_name);
 

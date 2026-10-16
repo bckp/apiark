@@ -99,10 +99,6 @@ pub async fn send_request_with_scripts(
     result
 }
 
-#[tauri::command]
-pub async fn read_full_response(_path: String) -> Result<String, String> {
-    Err("Responses are bounded and returned in full; arbitrary file reads are disabled".into())
-}
 pub(crate) fn resolve_oauth_token(
     params: &mut SendRequestParams,
     store: &OAuthTokenStore,

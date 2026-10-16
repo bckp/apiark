@@ -4,8 +4,6 @@ import { useTranslation } from "react-i18next";
 import type { CollectionNode, CollectionDefaults, HttpMethod } from "@apiark/types";
 import { useCollectionStore } from "@/stores/collection-store";
 import { useTabStore } from "@/stores/tab-store";
-import { useMockStore } from "@/stores/mock-store";
-import { useDocsStore } from "@/stores/docs-store";
 import {
   ChevronRight,
   ChevronDown,
@@ -16,8 +14,6 @@ import {
   Trash2,
   Pencil,
   Download,
-  Radio,
-  FileText,
   GripVertical,
   Cookie,
   X,
@@ -723,54 +719,6 @@ function TreeNodeRow({
                           useToastStore.getState().showError(`Export failed: ${err}`),
                         ),
                       );
-                    },
-                  },
-                  {
-                    label: t("sidebar.exportOpenapi"),
-                    icon: Download,
-                    onClick: () => {
-                      closeContextMenu();
-                      exportCollectionToFile(node.path, node.name, "openapi").catch((err: unknown) =>
-                        import("@/stores/toast-store").then(({ useToastStore }) =>
-                          useToastStore.getState().showError(`Export failed: ${err}`),
-                        ),
-                      );
-                    },
-                  },
-                  {
-                    label: t("sidebar.exportApiark"),
-                    icon: Download,
-                    onClick: () => {
-                      closeContextMenu();
-                      exportCollectionToFile(node.path, node.name, "apiark").catch((err: unknown) =>
-                        import("@/stores/toast-store").then(({ useToastStore }) =>
-                          useToastStore.getState().showError(`Export failed: ${err}`),
-                        ),
-                      );
-                    },
-                  },
-                  {
-                    label: t("sidebar.startMockServer"),
-                    icon: Radio,
-                    onClick: () => {
-                      closeContextMenu();
-                      useMockStore.getState().openDialog();
-                    },
-                  },
-                  {
-                    label: t("sidebar.generateDocs"),
-                    icon: FileText,
-                    onClick: () => {
-                      closeContextMenu();
-                      useDocsStore.getState().openDocs(node.path, node.name);
-                    },
-                  },
-                  {
-                    label: t("sidebar.cookieSettings"),
-                    icon: Cookie,
-                    onClick: () => {
-                      closeContextMenu();
-                      setCookieSettingsPath(node.path);
                     },
                   },
                   {

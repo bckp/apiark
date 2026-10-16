@@ -8,11 +8,8 @@ import type {
   HttpError,
   ResponseData,
   Tab,
-  TabProtocol,
   TabSnapshot,
   RequestFile,
-  GraphQLState,
-  GrpcState,
 } from "@apiark/types";
 import {
   sendRequest,
@@ -41,18 +38,8 @@ interface TabState {
   reorderTabs: (fromIndex: number, toIndex: number) => void;
 
   // Protocol-specific tab creation
-  newGraphQLTab: () => void;
-  newWebSocketTab: () => void;
-  newSSETab: () => void;
-  newGrpcTab: () => void;
-  newMqttTab: () => void;
-  newSocketIoTab: () => void;
 
   // GraphQL mutations
-  setGraphQLQuery: (query: string) => void;
-  setGraphQLVariables: (variables: string) => void;
-  setGraphQLOperationName: (operationName: string) => void;
-  setGraphQLSchema: (schema: string | null) => void;
 
   // Active tab request mutations
   setMethod: (method: HttpMethod) => void;
@@ -70,7 +57,7 @@ interface TabState {
 
   // Actions
   send: () => Promise<void>;
-  save: () => Promise<void>;
+  save: (tabId?: string) => Promise<void>;
   autoSave: () => Promise<void>;
   clearAutoSaveError: () => void;
   clearResponse: () => void;
@@ -184,8 +171,6 @@ function createEmptyTab(overrides?: Partial<Tab>): Tab {
     collectionPath: null,
     isDirty: false,
     protocol: "http",
-    graphql: null,
-    grpc: null,
     method: "GET",
     url: "",
     headers: [emptyKvRow()],
@@ -299,44 +284,6 @@ function requestFileToTab(
     }
   }
 
-  // Detect GraphQL: explicit protocol field or JSON body with a "query" field
-  const isGraphQL = file.protocol === "graphql" || (
-    file.body?.type === "json" && file.body.content &&
-    (() => { try { return "query" in JSON.parse(file.body!.content!); } catch { return false; } })()
-  );
-  const graphqlState: GraphQLState | null = isGraphQL
-    ? (() => {
-        try {
-          const parsed = JSON.parse(file.body!.content!);
-          return {
-            query: parsed.query || "",
-            variables: parsed.variables ? JSON.stringify(parsed.variables, null, 2) : "{}",
-            operationName: parsed.operationName || "",
-            schemaJson: null,
-          };
-        } catch { return { query: "", variables: "{}", operationName: "", schemaJson: null }; }
-      })()
-    : null;
-
-  // Determine protocol from explicit field or heuristic
-  const protocol: TabProtocol = file.protocol === "websocket" ? "websocket"
-    : file.protocol === "sse" ? "sse"
-    : file.protocol === "grpc" ? "grpc"
-    : isGraphQL ? "graphql"
-    : "http";
-
-  // Initialize gRPC state if needed
-  const grpcState: GrpcState | null = protocol === "grpc" ? {
-    services: [],
-    selectedService: null,
-    selectedMethod: null,
-    requestJson: "{}",
-    metadata: [emptyKvRow()],
-    loading: false,
-    response: null,
-    error: null,
-  } : null;
-
   return {
     id: generateTabId(),
     postman: file.postman,
@@ -344,9 +291,7 @@ function requestFileToTab(
     filePath,
     collectionPath,
     isDirty: false,
-    protocol,
-    graphql: graphqlState,
-    grpc: grpcState,
+    protocol: "http",
     method: file.method,
     url: buildUrlWithParams(file.url,mergedParams),
     headers,
@@ -385,31 +330,15 @@ function tabToRequestFile(tab: Tab): RequestFile {
   const params: Record<string, string> | undefined =
     Object.keys(tab.pathVariables).length > 0 ? { ...tab.pathVariables } : undefined;
 
-  // For GraphQL tabs, serialize the query/variables into a JSON body
-  // so it's detected as GraphQL when loaded back (requestFileToTab checks for body.content with "query")
-  let body: { type: string; content: string } | undefined;
-  if (tab.protocol === "graphql" && tab.graphql) {
-    const gqlBody: Record<string, unknown> = { query: tab.graphql.query };
-    try {
-      const vars = JSON.parse(tab.graphql.variables);
-      if (Object.keys(vars).length > 0) gqlBody.variables = vars;
-    } catch { /* ignore invalid JSON */ }
-    if (tab.graphql.operationName) gqlBody.operationName = tab.graphql.operationName;
-    body = { type: "json", content: JSON.stringify(gqlBody, null, 2) };
-    // Ensure Content-Type header is set
-    if (!headers["Content-Type"]) {
-      headers["Content-Type"] = "application/json";
-    }
-  } else if (tab.body.type !== "none") {
-    body = { type: tab.body.type, content: tab.body.type === "form-data" ? JSON.stringify(tab.body.formData) : tab.body.type === "urlencoded" ? new URLSearchParams(tab.body.formData.filter(v=>v.enabled).map(v=>[v.key,v.value])).toString() : tab.body.content };
-  }
+  const body = tab.body.type === "none" ? undefined : { type:tab.body.type,
+    content:tab.body.type === "form-data" ? JSON.stringify(tab.body.formData) : tab.body.type === "urlencoded" ? new URLSearchParams(tab.body.formData.filter(v=>v.enabled).map(v=>[v.key,v.value])).toString() : tab.body.content };
 
   return {
     postman: tab.postman,
     name: tab.name,
-    method: tab.protocol === "graphql" ? "POST" : tab.method,
+    method: tab.method,
     url: tab.url, // URL already contains query params (synced)
-    protocol: tab.protocol !== "http" ? tab.protocol : undefined,
+    protocol: undefined,
     headers,
     params,
     auth: tab.auth.type !== "none" || tab.authInherited === false ? tab.auth : undefined,
@@ -453,72 +382,6 @@ export const useTabStore = create<TabState>((set, get) => ({
       tabs: [...state.tabs, tab],
       activeTabId: tab.id,
     }));
-  },
-
-  newGraphQLTab: () => {
-    const tab = createEmptyTab({
-      name: "Untitled GraphQL",
-      protocol: "graphql",
-      method: "POST",
-      graphql: { query: "", variables: "{}", operationName: "", schemaJson: null },
-    });
-    set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));
-  },
-
-  newWebSocketTab: () => {
-    const tab = createEmptyTab({
-      name: "Untitled WebSocket",
-      protocol: "websocket",
-      method: "GET",
-      url: "ws://localhost:8080",
-    });
-    set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));
-  },
-
-  newSSETab: () => {
-    const tab = createEmptyTab({
-      name: "Untitled SSE",
-      protocol: "sse",
-      method: "GET",
-    });
-    set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));
-  },
-
-  newGrpcTab: () => {
-    const tab = createEmptyTab({
-      name: "Untitled gRPC",
-      protocol: "grpc",
-      url: "http://localhost:50051",
-      grpc: {
-        services: [],
-        selectedService: null,
-        selectedMethod: null,
-        requestJson: "{}",
-        metadata: [emptyKvRow()],
-        response: null,
-        loading: false,
-        error: null,
-      },
-    });
-    set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));
-  },
-
-  newMqttTab: () => {
-    const tab = createEmptyTab({
-      name: "Untitled MQTT",
-      protocol: "mqtt",
-      url: "localhost",
-    });
-    set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));
-  },
-
-  newSocketIoTab: () => {
-    const tab = createEmptyTab({
-      name: "Untitled Socket.IO",
-      protocol: "socketio",
-      url: "http://localhost:3000",
-    });
-    set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));
   },
 
   openTab: async (filePath, collectionPath) => {
@@ -665,19 +528,6 @@ export const useTabStore = create<TabState>((set, get) => ({
   setAssertions: (assertions) => set((state) => updateActiveTab(state, () => ({ assertions }))),
 
   // GraphQL setters
-  setGraphQLQuery: (query) => set((state) => updateActiveTab(state, (t) => ({
-    graphql: t.graphql ? { ...t.graphql, query } : null,
-  }))),
-  setGraphQLVariables: (variables) => set((state) => updateActiveTab(state, (t) => ({
-    graphql: t.graphql ? { ...t.graphql, variables } : null,
-  }))),
-  setGraphQLOperationName: (operationName) => set((state) => updateActiveTab(state, (t) => ({
-    graphql: t.graphql ? { ...t.graphql, operationName } : null,
-  }))),
-  setGraphQLSchema: (schemaJson) => set((state) => updateActiveTab(state, (t) => ({
-    graphql: t.graphql ? { ...t.graphql, schemaJson } : null,
-  }))),
-
   send: async () => {
     const { tabs, activeTabId } = get();
     const tab = tabs.find((t) => t.id === activeTabId);
@@ -716,25 +566,11 @@ export const useTabStore = create<TabState>((set, get) => ({
     // Build body — for GraphQL, construct from graphql state
     let body = tab.body.type !== "none" ? tab.body : undefined;
     let headers = tab.headers.filter((h) => h.key.trim() !== "" && h.enabled);
-    if (tab.protocol === "graphql" && tab.graphql) {
-      const gqlBody: Record<string, unknown> = { query: tab.graphql.query };
-      try {
-        const vars = JSON.parse(tab.graphql.variables);
-        if (Object.keys(vars).length > 0) gqlBody.variables = vars;
-      } catch { /* ignore invalid JSON */ }
-      if (tab.graphql.operationName) gqlBody.operationName = tab.graphql.operationName;
-      body = { type: "json", content: JSON.stringify(gqlBody), formData: [] };
-      // Auto-add Content-Type if not present
-      if (!headers.some((h) => h.key.toLowerCase() === "content-type")) {
-        headers = [{ id: kvId(), key: "Content-Type", value: "application/json", enabled: true }, ...headers];
-      }
-    }
-
     // Resolve path variables (:paramName → value) in the URL before sending
     const resolvedUrl = resolvePathVariables(tab.url.trim(), tab.pathVariables);
 
     const requestParams = {
-      method: tab.protocol === "graphql" ? ("POST" as const) : tab.method,
+      method: tab.method,
       url: resolvedUrl,
       headers,
       // Params are already synced into the URL query string, so send empty
@@ -837,8 +673,9 @@ export const useTabStore = create<TabState>((set, get) => ({
     }
   },
 
-  save: async () => {
-    const { tabs, activeTabId } = get();
+  save: async (tabId) => {
+    const { tabs } = get();
+    const activeTabId = tabId ?? get().activeTabId;
     const tab = tabs.find((t) => t.id === activeTabId);
     if (!tab || !tab.filePath) return;
 
@@ -1008,7 +845,7 @@ export const useTabStore = create<TabState>((set, get) => ({
     const seen = new Set<string>();
     const persistedTabs = tabs
       .filter((t) => {
-        if (!t.filePath || !t.collectionPath || t.protocol === "websocket" || t.protocol === "sse" || t.protocol === "grpc") return false;
+        if (!t.filePath || !t.collectionPath) return false;
         if (seen.has(t.filePath)) return false;
         seen.add(t.filePath);
         return true;

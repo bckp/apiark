@@ -76,43 +76,10 @@ describe("Tab Store", () => {
     expect(state.activeTabId).toBe(state.tabs[0].id);
   });
 
-  it("creates a new WebSocket tab", () => {
-    useTabStore.getState().newWebSocketTab();
-    const state = useTabStore.getState();
-    expect(state.tabs).toHaveLength(1);
-    expect(state.tabs[0].protocol).toBe("websocket");
-    expect(state.tabs[0].name).toBe("Untitled WebSocket");
-  });
 
-  it("creates a new GraphQL tab", () => {
-    useTabStore.getState().newGraphQLTab();
-    const state = useTabStore.getState();
-    expect(state.tabs).toHaveLength(1);
-    expect(state.tabs[0].protocol).toBe("graphql");
-    expect(state.tabs[0].graphql).not.toBeNull();
-  });
 
-  it("creates a new gRPC tab", () => {
-    useTabStore.getState().newGrpcTab();
-    const state = useTabStore.getState();
-    expect(state.tabs).toHaveLength(1);
-    expect(state.tabs[0].protocol).toBe("grpc");
-    expect(state.tabs[0].grpc).not.toBeNull();
-  });
 
-  it("creates a new MQTT tab", () => {
-    useTabStore.getState().newMqttTab();
-    const state = useTabStore.getState();
-    expect(state.tabs).toHaveLength(1);
-    expect(state.tabs[0].protocol).toBe("mqtt");
-  });
 
-  it("creates a new Socket.IO tab", () => {
-    useTabStore.getState().newSocketIoTab();
-    const state = useTabStore.getState();
-    expect(state.tabs).toHaveLength(1);
-    expect(state.tabs[0].protocol).toBe("socketio");
-  });
 
   it("closes a tab", () => {
     useTabStore.getState().newTab();

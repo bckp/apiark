@@ -1,7 +1,10 @@
 {
   "identifier": "main-window",
-  "description": "Permissions for the main application window — explicit minimal set",
-  "windows": ["main"],
+  "description": "Permissions for the main application window \u2014 explicit minimal set",
+  "windows": [
+    "main",
+    "window-*"
+  ],
   "permissions": [
     "core:default",
     "core:window:default",
@@ -17,14 +20,14 @@
     {
       "identifier": "shell:allow-open",
       "allow": [
-        { "url": "https://**" },
-        { "url": "http://**" }
+        {
+          "url": "https://**"
+        },
+        {
+          "url": "http://**"
+        }
       ]
     },
-    "notification:default",
-    "notification:allow-notify",
-    "notification:allow-is-permission-granted",
-    "notification:allow-request-permission",
     "fs:default",
     "fs:allow-read",
     "fs:allow-write",
@@ -35,10 +38,7 @@
     "fs:allow-rename",
     "fs:allow-copy-file",
     "fs:allow-stat",
-    "updater:default",
-    "updater:allow-check",
-    "updater:allow-download-and-install",
     "core:window:allow-create",
-    "deep-link:default"
+    "core:window:allow-start-dragging"
   ]
 }

@@ -304,24 +304,7 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
 
   return (
     <div data-tour="url-bar" className="flex items-center gap-3 bg-[var(--color-card)] px-4 py-3">
-      {/* Method selector — show static badge for non-HTTP protocols */}
-      {tab.protocol === "graphql" ? (
-        <span className="rounded-lg bg-violet-500/15 px-3 py-2 text-sm font-bold text-violet-400">
-          GQL
-        </span>
-      ) : tab.protocol === "websocket" ? (
-        <span className="rounded-lg bg-cyan-500/15 px-3 py-2 text-sm font-bold text-cyan-400">
-          WS
-        </span>
-      ) : tab.protocol === "sse" ? (
-        <span className="rounded-lg bg-orange-500/15 px-3 py-2 text-sm font-bold text-orange-400">
-          SSE
-        </span>
-      ) : tab.protocol === "grpc" ? (
-        <span className="rounded-lg bg-green-500/15 px-3 py-2 text-sm font-bold text-green-400">
-          gRPC
-        </span>
-      ) : (
+      {/* HTTP method */}
         <select
           value={tab.method}
           onChange={(e) => setMethod(e.target.value as HttpMethod)}
@@ -333,7 +316,6 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
             </option>
           ))}
         </select>
-      )}
 
       {/* URL input with variable highlighting overlay */}
       <div className="relative flex-1">

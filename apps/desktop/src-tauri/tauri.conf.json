@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-config-schema/schema.json",
-  "productName": "ApiArk",
+  "productName": "ApiArk Internal",
   "version": "0.4.6",
-  "identifier": "dev.apiark.app",
+  "identifier": "cz.kepakovi.apiark.internal",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,35 +12,33 @@
   "app": {
     "windows": [
       {
-        "title": "ApiArk",
+        "title": "ApiArk Internal",
         "width": 1280,
         "height": 800,
         "minWidth": 800,
-        "minHeight": 600
+        "minHeight": 600,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 20
+        },
+        "theme": "Dark",
+        "backgroundColor": "#111114"
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ipc: tauri: https://github.com https://api.github.com https://releases.apiark.dev https://api.apiark.dev; font-src 'self' data:; frame-src 'self' blob: data:"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ipc: tauri:; font-src 'self' data:; frame-src 'none'; object-src 'none'"
     }
   },
-  "plugins": {
-    "deep-link": {
-      "mobile": [],
-      "desktop": {
-        "schemes": ["apiark"]
-      }
-    },
-    "updater": {
-      "endpoints": [
-        "https://github.com/berbicanes/apiark/releases/latest/download/latest.json"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZBNEYzRDVFODZFMzM3NDIKUldSQ04rT0dYajFQK29pN1FNR1pNMUt6Sy8xdjFORXpZZXROb3RwVmRJUW9BbDViSWxRQkE5OUUK"
-    }
-  },
+  "plugins": {},
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": "v1Compatible",
-    "targets": "all",
+    "createUpdaterArtifacts": false,
+    "targets": [
+      "app",
+      "dmg"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/64x64.png",

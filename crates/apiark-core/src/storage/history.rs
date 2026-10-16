@@ -76,20 +76,7 @@ impl HistoryDb {
             );
             CREATE INDEX IF NOT EXISTS idx_history_timestamp ON history(timestamp DESC);
             CREATE INDEX IF NOT EXISTS idx_history_url ON history(url);
-            CREATE INDEX IF NOT EXISTS idx_history_method ON history(method);
-
-            CREATE TABLE IF NOT EXISTS monitor_results (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                monitor_id TEXT NOT NULL,
-                timestamp TEXT NOT NULL,
-                total_requests INTEGER NOT NULL,
-                total_passed INTEGER NOT NULL,
-                total_failed INTEGER NOT NULL,
-                total_time_ms INTEGER NOT NULL,
-                status TEXT NOT NULL,
-                error TEXT
-            );
-            CREATE INDEX IF NOT EXISTS idx_monitor_results_monitor ON monitor_results(monitor_id, timestamp DESC);",
+            CREATE INDEX IF NOT EXISTS idx_history_method ON history(method);",
         )
         .map_err(|e| format!("Migration failed: {e}"))?;
         Ok(())
@@ -227,74 +214,4 @@ impl HistoryDb {
             .map_err(|e| format!("Failed to delete history entry: {e}"))?;
         Ok(())
     }
-
-    /// Insert a monitor result.
-    pub fn insert_monitor_result(&self, result: &MonitorResult) -> Result<(), String> {
-        let conn = self.conn.lock().map_err(|e| format!("Lock error: {e}"))?;
-        conn.execute(
-            "INSERT INTO monitor_results (monitor_id, timestamp, total_requests, total_passed, total_failed, total_time_ms, status, error)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![
-                result.monitor_id,
-                result.timestamp,
-                result.total_requests as i64,
-                result.total_passed as i64,
-                result.total_failed as i64,
-                result.total_time_ms as i64,
-                result.status,
-                result.error,
-            ],
-        )
-        .map_err(|e| format!("Failed to insert monitor result: {e}"))?;
-        Ok(())
-    }
-
-    /// Get monitor results for a specific monitor.
-    pub fn get_monitor_results(
-        &self,
-        monitor_id: &str,
-        limit: usize,
-    ) -> Result<Vec<MonitorResult>, String> {
-        let conn = self.conn.lock().map_err(|e| format!("Lock error: {e}"))?;
-        let mut stmt = conn
-            .prepare(
-                "SELECT id, monitor_id, timestamp, total_requests, total_passed, total_failed, total_time_ms, status, error
-                 FROM monitor_results WHERE monitor_id = ?1 ORDER BY timestamp DESC LIMIT ?2",
-            )
-            .map_err(|e| format!("Prepare failed: {e}"))?;
-
-        let results = stmt
-            .query_map(params![monitor_id, limit as i64], |row| {
-                Ok(MonitorResult {
-                    id: row.get(0)?,
-                    monitor_id: row.get(1)?,
-                    timestamp: row.get(2)?,
-                    total_requests: row.get::<_, i64>(3)? as usize,
-                    total_passed: row.get::<_, i64>(4)? as usize,
-                    total_failed: row.get::<_, i64>(5)? as usize,
-                    total_time_ms: row.get::<_, i64>(6)? as u64,
-                    status: row.get(7)?,
-                    error: row.get(8)?,
-                })
-            })
-            .map_err(|e| format!("Query failed: {e}"))?
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| format!("Row error: {e}"))?;
-
-        Ok(results)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MonitorResult {
-    pub id: i64,
-    pub monitor_id: String,
-    pub timestamp: String,
-    pub total_requests: usize,
-    pub total_passed: usize,
-    pub total_failed: usize,
-    pub total_time_ms: u64,
-    pub status: String, // "pass" | "fail"
-    pub error: Option<String>,
 }

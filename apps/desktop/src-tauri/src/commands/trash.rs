@@ -16,7 +16,7 @@ pub struct TrashItem {
 fn trash_base() -> Result<PathBuf, String> {
     Ok(dirs::home_dir()
         .ok_or("Could not determine home directory")?
-        .join(".apiark")
+        .join(".apiark-internal")
         .join("trash"))
 }
 

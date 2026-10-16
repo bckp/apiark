@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Upload, FileJson, FolderOpen, AlertTriangle, Check, Loader2, X } from "lucide-react";
+import { Upload, FileJson, AlertTriangle, Check, Loader2, X } from "lucide-react";
 import type { ImportFormat, ImportPreview } from "@apiark/types";
 import {
   detectImportFormat,
@@ -19,11 +19,6 @@ type Step = "select" | "preview" | "importing";
 
 const FORMAT_LABELS: Record<ImportFormat, string> = {
   postman: "Postman v2.1",
-  insomnia: "Insomnia v4",
-  bruno: "Bruno",
-  openapi: "OpenAPI 3.x",
-  hoppscotch: "Hoppscotch",
-  har: "HAR (HTTP Archive)",
 };
 
 export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
@@ -91,27 +86,6 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     }
   }, []);
 
-  const handleSelectDirectory = useCallback(async () => {
-    try {
-      const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
-      const selected = await openDialog({
-        directory: true,
-        multiple: false,
-      });
-
-      if (!selected) return;
-
-      const path = typeof selected === "string" ? selected : selected;
-      if (!path) return;
-
-      setFilePath(path);
-      setFormat("bruno");
-      setError(null);
-    } catch (err) {
-      setError(String(err));
-    }
-  }, []);
-
   const handlePreview = useCallback(async () => {
     if (!filePath || !format) return;
 
@@ -123,7 +97,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       // Default target dir
       const { homeDir, join } = await import("@tauri-apps/api/path");
       const home = await homeDir();
-      setTargetDir(await join(home, "ApiArk"));
+      setTargetDir(await join(home, "ApiArk Internal"));
 
       setStep("preview");
     } catch (err) {
@@ -194,7 +168,6 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                 format={format}
                 error={error}
                 onSelectFile={handleSelectFile}
-                onSelectDirectory={handleSelectDirectory}
                 onFormatChange={setFormat}
                 onNext={handlePreview}
               />
@@ -231,7 +204,6 @@ function SelectStep({
   format,
   error,
   onSelectFile,
-  onSelectDirectory,
   onFormatChange,
   onNext,
 }: {
@@ -239,7 +211,6 @@ function SelectStep({
   format: ImportFormat | null;
   error: string | null;
   onSelectFile: () => void;
-  onSelectDirectory: () => void;
   onFormatChange: (f: ImportFormat) => void;
   onNext: () => void;
 }) {
@@ -258,13 +229,6 @@ function SelectStep({
           >
             <FileJson className="h-4 w-4" />
             {t("import.selectFile")}
-          </button>
-          <button
-            onClick={onSelectDirectory}
-            className="flex flex-1 items-center gap-2 rounded border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:border-blue-500 hover:text-[var(--color-text-primary)]"
-          >
-            <FolderOpen className="h-4 w-4" />
-            {t("import.selectFolder")}
           </button>
         </div>
         {filePath && (

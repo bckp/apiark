@@ -164,7 +164,7 @@ impl CookieJarManager {
 
         let cookies_dir = dirs::home_dir()
             .ok_or("Could not determine home directory")?
-            .join(".apiark")
+            .join(".apiark-internal")
             .join("cookies");
 
         std::fs::create_dir_all(&cookies_dir)
@@ -186,7 +186,7 @@ impl CookieJarManager {
     pub fn load_from_disk(&self, collection_path: &str) -> Result<(), String> {
         let cookies_dir = dirs::home_dir()
             .ok_or("Could not determine home directory")?
-            .join(".apiark")
+            .join(".apiark-internal")
             .join("cookies");
 
         let hash = simple_hash(collection_path);
