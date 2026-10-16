@@ -139,6 +139,7 @@ export interface SendRequestParams {
 // ── Response (matches Rust ResponseData) ──
 
 export interface CookieData {
+  hostOnly?: boolean;
   name: string;
   value: string;
   domain?: string;
@@ -149,6 +150,7 @@ export interface CookieData {
 }
 
 export interface ResponseData {
+  visualizations?: Visualization[];
   status: number;
   statusText: string;
   headers: KeyValuePair[];
@@ -160,6 +162,11 @@ export interface ResponseData {
   fullSize?: number;
   tempPath?: string;
 }
+
+export type Visualization =
+  | { type: "image"; name: string; data: string; mimeType: "image/png"; width: number; height: number }
+  | { type: "text"; name: string; data: string }
+  | { type: "json"; name: string; data: unknown };
 
 // ── Error (matches Rust HttpError) ──
 

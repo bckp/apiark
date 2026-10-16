@@ -22,6 +22,41 @@ vi.mock("@/stores/console-store", () => ({
 }));
 
 import { useTabStore } from "@/stores/tab-store";
+import { sendRequestWithScripts } from "@/lib/tauri-api";
+
+function scriptedResponse(text: string) {
+  return {status:200,statusText:"OK",headers:[],cookies:[],body:text,timeMs:1,sizeBytes:1,
+    testResults:[],assertionResults:[],consoleOutput:[],envMutations:{},visualizations:[{type:"text" as const,name:"Result",data:text}]};
+}
+
+describe("Response visualization ownership", () => {
+  beforeEach(() => {useTabStore.setState({tabs:[],activeTabId:null});vi.mocked(sendRequestWithScripts).mockReset();});
+  it("keeps an in-flight result on its original tab", async () => {
+    let finish!: (value: ReturnType<typeof scriptedResponse>) => void;
+    vi.mocked(sendRequestWithScripts).mockImplementationOnce(() => new Promise((resolve)=>{finish=resolve;}));
+    useTabStore.getState().newTab();useTabStore.getState().setUrl("https://example.test");useTabStore.getState().setPostResponseScript("ark.visualize('text',{data:'a'})");
+    const original=useTabStore.getState().activeTabId;
+    const pending=useTabStore.getState().send();await Promise.resolve();await Promise.resolve();
+    useTabStore.getState().newTab();finish(scriptedResponse("original"));await pending;
+    expect(useTabStore.getState().tabs.find((t)=>t.id===original)?.response?.visualizations?.[0]).toMatchObject({data:"original"});
+    expect(useTabStore.getState().tabs.at(-1)?.response).toBeNull();
+  });
+  it("clears outputs on rerun and ignores an older completion", async () => {
+    let oldFinish!: (value: ReturnType<typeof scriptedResponse>) => void;
+    vi.mocked(sendRequestWithScripts).mockImplementationOnce(()=>new Promise((resolve)=>{oldFinish=resolve;})).mockResolvedValueOnce(scriptedResponse("new"));
+    useTabStore.getState().newTab();useTabStore.getState().setUrl("https://example.test");useTabStore.getState().setPostResponseScript("script");
+    const old=useTabStore.getState().send();await Promise.resolve();await Promise.resolve();
+    const latest=useTabStore.getState().send();expect(useTabStore.getState().tabs[0].response).toBeNull();await latest;
+    oldFinish(scriptedResponse("old"));await old;
+    expect(useTabStore.getState().tabs[0].response?.body).toBe("new");
+  });
+  it("clears old outputs if a script/transport fails", async () => {
+    vi.mocked(sendRequestWithScripts).mockResolvedValueOnce(scriptedResponse("first")).mockRejectedValueOnce("script failed");
+    useTabStore.getState().newTab();useTabStore.getState().setUrl("https://example.test");useTabStore.getState().setPostResponseScript("script");
+    await useTabStore.getState().send();await useTabStore.getState().send();
+    expect(useTabStore.getState().tabs[0].response).toBeNull();expect(useTabStore.getState().tabs[0].error?.message).toBe("script failed");
+  });
+});
 
 describe("Tab Store", () => {
   beforeEach(() => {

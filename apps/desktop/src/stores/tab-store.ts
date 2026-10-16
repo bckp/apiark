@@ -96,6 +96,7 @@ interface TabState {
   restoreTabs: () => Promise<void>;
 }
 
+const requestRuns = new Map<string, string>();
 let tabCounter = 0;
 function generateTabId(): string {
   return `tab_${Date.now()}_${++tabCounter}`;
@@ -707,6 +708,9 @@ export const useTabStore = create<TabState>((set, get) => ({
     const tab = tabs.find((t) => t.id === activeTabId);
     if (!tab || !tab.url.trim()) return;
 
+    const executionId = crypto.randomUUID();
+    requestRuns.set(tab.id, executionId);
+    const current = () => requestRuns.get(tab.id) === executionId && get().tabs.some((t) => t.id === tab.id);
     // Mark loading
     set({
       tabs: tabs.map((t) =>
@@ -716,9 +720,13 @@ export const useTabStore = create<TabState>((set, get) => ({
       ),
     });
 
+    try {
     // Get resolved variables from environment store
     const envStore = useEnvironmentStore.getState();
+    const environmentName = envStore.activeEnvironmentName;
+    const environmentCollection = envStore.activeCollectionPath;
     const variables = await envStore.getResolvedVariables();
+    if (!current()) return;
 
     // Get network settings
     const { settings } = useSettingsStore.getState();
@@ -776,7 +784,6 @@ export const useTabStore = create<TabState>((set, get) => ({
 
     const hasScripts = tab.preRequestScript || tab.postResponseScript || tab.testScript || tab.assertions;
 
-    try {
       if (hasScripts) {
         const scriptedResponse = await sendRequestWithScripts(
           requestParams,
@@ -788,8 +795,9 @@ export const useTabStore = create<TabState>((set, get) => ({
           tab.testScript,
           tab.assertions,
         );
+        if (!current()) return;
         // Apply env mutations to the environment store
-        if (scriptedResponse.envMutations && Object.keys(scriptedResponse.envMutations).length > 0) {
+        if (useEnvironmentStore.getState().activeEnvironmentName === environmentName && useEnvironmentStore.getState().activeCollectionPath === environmentCollection && scriptedResponse.envMutations && Object.keys(scriptedResponse.envMutations).length > 0) {
           envStore.applyMutations(scriptedResponse.envMutations);
         }
         set({
@@ -798,6 +806,7 @@ export const useTabStore = create<TabState>((set, get) => ({
               ? {
                   ...t,
                   response: {
+                    visualizations: scriptedResponse.visualizations ?? [],
                     status: scriptedResponse.status,
                     statusText: scriptedResponse.statusText,
                     headers: scriptedResponse.headers,
@@ -830,6 +839,7 @@ export const useTabStore = create<TabState>((set, get) => ({
           tab.collectionPath ?? undefined,
           tab.name !== "Untitled Request" ? tab.name : undefined,
         );
+        if (!current()) return;
         set({
           tabs: get().tabs.map((t) =>
             t.id === activeTabId ? { ...t, response, loading: false } : t,
@@ -839,16 +849,19 @@ export const useTabStore = create<TabState>((set, get) => ({
         useConsoleStore.getState().log(reqLabel, `${response.status} ${response.statusText} (${response.timeMs}ms)`, "info");
       }
     } catch (err) {
+      if (!current()) return;
       set({
         tabs: get().tabs.map((t) =>
           t.id === activeTabId
-            ? { ...t, error: err as HttpError, loading: false }
+            ? { ...t, error: typeof err === "object" && err !== null && "message" in err ? err as HttpError : { errorType: "request_error", message: String(err) }, loading: false }
             : t,
         ),
       });
       const reqLabel = tab.name || tab.url || "Request";
       const httpErr = err as HttpError;
       useConsoleStore.getState().log(reqLabel, httpErr?.message || String(err), "error");
+    } finally {
+      if (requestRuns.get(tab.id) === executionId) requestRuns.delete(tab.id);
     }
   },
 

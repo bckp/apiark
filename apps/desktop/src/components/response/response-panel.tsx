@@ -15,7 +15,7 @@ import { TimingPanel } from "./timing-panel";
 import { CodeEditor } from "@/components/ui/code-editor";
 import type { KeyValuePair } from "@apiark/types";
 
-type ResponseTab = "body" | "headers" | "cookies" | "tests" | "timing" | "console" | "code";
+type ResponseTab = "visualizations" | "body" | "headers" | "cookies" | "tests" | "timing" | "console" | "code";
 
 function statusColor(status: number): string {
   if (status < 200) return "text-blue-400";
@@ -209,6 +209,14 @@ export function ResponsePanel() {
           </>
         )}
 
+        {activeTab === "visualizations" && <div className="space-y-4">
+          {(response.visualizations ?? []).length === 0 && <p>No visualizations for this run. Use ark.visualize in a post-response script.</p>}
+          {(response.visualizations ?? []).map((output, index) => <section key={`${tab.id}-${index}`}>
+            <h3 className="mb-2 text-sm font-medium">{output.name}</h3>
+            {output.type === "image" ? <img src={`data:${output.mimeType};base64,${output.data}`} alt={output.name} width={output.width} height={output.height} className="max-h-[70vh] max-w-full object-contain" />
+              : <pre className="whitespace-pre-wrap break-words text-sm">{output.type === "text" ? output.data : JSON.stringify(output.data, null, 2)}</pre>}
+          </section>)}
+        </div>}
         {activeTab === "timing" && <TimingPanel response={response} />}
       </div>
       )}
@@ -317,8 +325,9 @@ function ResponseTabs({
 }) {
   const { t } = useTranslation();
 
-  const TAB_IDS: ResponseTab[] = ["body", "headers", "cookies", "tests", "timing", "console", "code"];
+  const TAB_IDS: ResponseTab[] = ["body", "visualizations", "headers", "cookies", "tests", "timing", "console", "code"];
   const TAB_LABEL_KEYS: Record<ResponseTab, string> = {
+    visualizations: "Visualizations",
     body: "response.body",
     headers: "response.headers",
     cookies: "response.cookies",
