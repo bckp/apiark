@@ -24,15 +24,17 @@ pub async fn run_collection(
     resolve_auth: impl Fn(&mut SendRequestParams) -> Result<(), String>,
     progress: impl Fn(RunProgress),
 ) -> Result<RunSummary, String> {
-    let root = Path::new(&config.collection_path);
+    let canonical_root = Path::new(&config.collection_path)
+        .canonicalize()
+        .map_err(|e| e.to_string())?;
+    let root = canonical_root.as_path();
     let tree = collection::load_collection_tree(root)?;
     let mut request_paths = paths(&tree);
     if let Some(folder) = &config.folder_path {
         let folder = Path::new(folder)
             .canonicalize()
             .map_err(|e| e.to_string())?;
-        let canonical_root = root.canonicalize().map_err(|e| e.to_string())?;
-        if !folder.starts_with(canonical_root) {
+        if !folder.is_dir() || !folder.starts_with(root) {
             return Err("Folder is outside collection".into());
         }
         request_paths.retain(|p| Path::new(p).starts_with(&folder));
@@ -154,6 +156,7 @@ pub async fn run_collection(
                                                 t.error.as_deref().unwrap_or("failed")
                                             )
                                         })
+                                        .chain(response.assertion_results.iter().filter(|a|!a.passed).map(|a|format!("Assertion {} {}: expected {}, got {}",a.path,a.operator,a.expected,a.actual)))
                                         .collect::<Vec<_>>()
                                         .join("; "),
                                 );

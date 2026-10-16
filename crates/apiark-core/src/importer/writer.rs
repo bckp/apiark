@@ -200,6 +200,7 @@ fn convert_body(body: &Option<ImportBody>) -> Option<RequestBodyFile> {
 fn sanitize_filename(name: &str) -> String {
     let sanitized: String = name
         .chars()
+        .take(80)
         .map(|c| {
             if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' {
                 c
@@ -218,7 +219,19 @@ fn sanitize_filename(name: &str) -> String {
     if sanitized.is_empty() {
         "untitled".to_string()
     } else {
-        sanitized.to_lowercase()
+        let lower = sanitized.to_lowercase();
+        let stem = lower.split('.').next().unwrap_or("");
+        if matches!(stem, "con" | "prn" | "aux" | "nul")
+            || ["com", "lpt"].iter().any(|prefix| {
+                stem.strip_prefix(prefix).is_some_and(|suffix| {
+                    matches!(suffix, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9")
+                })
+            })
+        {
+            format!("_{lower}")
+        } else {
+            lower
+        }
     }
 }
 

@@ -12,6 +12,9 @@ pub fn parse_postman(content: &str) -> Result<ImportData, String> {
     let info = root
         .get("info")
         .ok_or("Missing 'info' field — is this a Postman v2.1 collection?")?;
+    if !root.get("item").is_some_and(Value::is_array) {
+        return Err("Postman collection requires an item array".into());
+    }
 
     let collection_name = info
         .get("name")
@@ -37,7 +40,10 @@ pub fn parse_postman(content: &str) -> Result<ImportData, String> {
     let mut environments = Vec::new();
     if let Some(vars) = root.get("variable").and_then(|v| v.as_array()) {
         let mut variables = HashMap::new();
-        for var in vars {
+        for var in vars
+            .iter()
+            .filter(|v| v.get("disabled").and_then(Value::as_bool) != Some(true))
+        {
             if let (Some(key), Some(value)) = (
                 var.get("key").and_then(|v| v.as_str()),
                 var.get("value").map(|v| {
@@ -322,6 +328,9 @@ pub(crate) fn parse_headers(headers_val: Option<&Value>) -> HashMap<String, Stri
 
 pub(crate) fn parse_body(body_val: Option<&Value>) -> Option<ImportBody> {
     let body = body_val?;
+    if body.get("disabled").and_then(Value::as_bool) == Some(true) {
+        return None;
+    }
     let mode = body.get("mode").and_then(|v| v.as_str())?;
 
     match mode {
@@ -626,6 +635,9 @@ fn audit(value: &Value, warnings: &mut Vec<ImportWarning>) -> Result<(), String>
         })
     };
     let req = value.get("request").unwrap_or(value);
+    if req.get("header").is_some_and(|v| !v.is_array()) {
+        return Err(format!("{name}: Raw string headers are unsupported; convert to header objects before importing"));
+    }
     if value.get("info").is_none() && value.get("item").is_none() && value.get("request").is_none()
     {
         return Err(format!(
@@ -723,9 +735,27 @@ fn audit(value: &Value, warnings: &mut Vec<ImportWarning>) -> Result<(), String>
     }
     if let Some(events) = value.get("event").and_then(Value::as_array) {
         for event in events {
+            if event.get("disabled").and_then(Value::as_bool) == Some(true) {
+                return Err(format!("{name}: Disabled script events are unsupported; import aborted so skipped tests cannot pass"));
+            }
+            if let Some(script) = event.get("script") {
+                if script.get("src").is_some()
+                    || script
+                        .get("type")
+                        .and_then(Value::as_str)
+                        .is_some_and(|kind| kind != "text/javascript")
+                    || script.get("exec").is_some_and(|exec| {
+                        !exec.is_string()
+                            && !exec
+                                .as_array()
+                                .is_some_and(|lines| lines.iter().all(Value::is_string))
+                    })
+                {
+                    return Err(format!("{name}: External, non-JavaScript or malformed script source is unsupported; import aborted"));
+                }
+            }
             if event.to_string().contains("pm.") {
                 warn("Scripts use pm.*. They are preserved; rewrite them to ark.* before running");
-                break;
             }
         }
     }

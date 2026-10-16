@@ -6,7 +6,7 @@ license = "MIT"
 description = "Shared ApiArk collection, HTTP and scripting runtime"
 
 [dependencies]
-reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "rustls-tls", "multipart", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "multipart", "stream"] }
 url = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "net", "io-util"] }
 serde = { version = "1", features = ["derive"] }
@@ -25,13 +25,9 @@ sha2 = "0.10"
 base64 = "0.22"
 urlencoding = "2"
 hmac = "0.12"
-md-5 = "0.10"
 jsonwebtoken = "9"
 hex = "0.4"
 zip = { version = "2", default-features = false, features = ["deflate"] }
-md4 = "0.10"
-des = "0.8"
-walkdir = "2"
 cookie = "0.18"
 psl = "2"
 csv = "1"

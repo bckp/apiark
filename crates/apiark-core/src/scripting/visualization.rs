@@ -150,6 +150,43 @@ pub fn validate(raw: Option<&serde_json::Value>) -> Result<Vec<Visualization>, S
 mod tests {
     use super::*;
     #[test]
+    fn decoded_size_pixel_count_json_and_combined_bytes_are_bounded() {
+        let image_entry = |bytes: Vec<u8>| serde_json::json!({"type":"image","mimeType":"image/png","data":STANDARD.encode(bytes)});
+        let error = validate(Some(&serde_json::json!([image_entry(vec![
+            0;
+            MAX_IMAGE_BYTES
+                + 1
+        ])])))
+        .unwrap_err();
+        assert!(error.contains("4 MiB"));
+        let mut pixels = Cursor::new(Vec::new());
+        image::DynamicImage::new_rgb8(4096, 2049)
+            .write_to(&mut pixels, image::ImageFormat::Png)
+            .unwrap();
+        assert!(
+            validate(Some(&serde_json::json!([image_entry(pixels.into_inner())])))
+                .unwrap_err()
+                .contains("pixel")
+        );
+        assert!(validate(Some(
+            &serde_json::json!([{"type":"json","data":{"large":"x".repeat(MAX_TEXT_BYTES)}}])
+        ))
+        .unwrap_err()
+        .contains("256 KiB"));
+        let mut bytes = Cursor::new(Vec::new());
+        image::DynamicImage::new_rgb8(1, 1)
+            .write_to(&mut bytes, image::ImageFormat::Png)
+            .unwrap();
+        let mut bytes = bytes.into_inner();
+        bytes.resize(MAX_IMAGE_BYTES / 2 + 1, 0);
+        let error = validate(Some(&serde_json::json!([
+            image_entry(bytes.clone()),
+            image_entry(bytes)
+        ])))
+        .unwrap_err();
+        assert!(error.contains("Combined"));
+    }
+    #[test]
     fn accepts_rasters_and_rejects_active_content_urls_limits_and_bad_signatures() {
         for format in [image::ImageFormat::Png, image::ImageFormat::Jpeg] {
             let mut bytes = Cursor::new(Vec::new());

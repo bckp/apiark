@@ -71,12 +71,19 @@ pub async fn execute(
         if scoped.is_empty() {
             None
         } else {
-            Some(scoped.join("\n;\n"))
+            Some(
+                scoped
+                    .into_iter()
+                    .map(|script| format!("{{\n{script}\n}}"))
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            )
         }
     };
     let pre_request_script = combine(scopes.pre, pre_request_script);
     let test_script = combine(scopes.post, test_script);
-    let mut interpolated = interpolate_params(&params, &vars);
+    // Preserve templates until pre-request mutations have completed.
+    let mut interpolated = params;
 
     let defaults = collection_path
         .and_then(|p| collection::load_collection_config(std::path::Path::new(p)).ok())
@@ -88,7 +95,7 @@ pub async fn execute(
         }
     }
     if interpolated.auth.is_none() {
-        interpolated.auth = scopes.auth.as_ref().map(|a| interpolate_auth(a, &vars));
+        interpolated.auth = scopes.auth;
     }
     let mut all_console: Vec<ConsoleEntry> = Vec::new();
     let mut all_tests: Vec<TestResult> = Vec::new();
@@ -121,7 +128,7 @@ pub async fn execute(
                 "DELETE" => crate::models::request::HttpMethod::DELETE,
                 "HEAD" => crate::models::request::HttpMethod::HEAD,
                 "OPTIONS" => crate::models::request::HttpMethod::OPTIONS,
-                _ => interpolated.method,
+                other => return Err(format!("Unsupported pre-request HTTP method: {other}")),
             };
             // Apply header mutations
             interpolated.headers = result
@@ -134,6 +141,12 @@ pub async fn execute(
             if let Some(body_str) = result.request.body {
                 if let Some(ref mut body) = interpolated.body {
                     body.content = body_str;
+                } else {
+                    interpolated.body = Some(RequestBody {
+                        body_type: BodyType::Raw,
+                        content: body_str,
+                        form_data: vec![],
+                    });
                 }
             }
 

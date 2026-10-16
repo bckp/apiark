@@ -50,3 +50,78 @@ async fn exit_code_and_machine_reports_follow_shared_script_results() {
     }
     server.abort();
 }
+
+#[tokio::test]
+async fn folder_selection_and_invalid_arguments_cannot_run_the_wrong_requests() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move {
+        axum::serve(
+            listener,
+            axum::Router::new().route("/", axum::routing::get(|| async { "ok" })),
+        )
+        .await
+        .unwrap()
+    });
+    let tmp = tempfile::tempdir().unwrap();
+    std::fs::create_dir(tmp.path().join(".apiark")).unwrap();
+    std::fs::write(
+        tmp.path().join(".apiark/apiark.yaml"),
+        "name: Synthetic\nversion: 1\n",
+    )
+    .unwrap();
+    std::fs::write(
+        tmp.path().join("failing.yaml"),
+        format!(
+            "name: Not selected\nmethod: GET\nurl: {url}\ntests: throw Error('must not run')\n"
+        ),
+    )
+    .unwrap();
+    std::fs::create_dir(tmp.path().join("selected")).unwrap();
+    std::fs::write(
+        tmp.path().join("selected/pass.yaml"),
+        format!("name: Selected\nmethod: GET\nurl: {url}\n"),
+    )
+    .unwrap();
+    let run = |args: Vec<String>| async move {
+        tokio::process::Command::new(env!("CARGO_BIN_EXE_apiark"))
+            .args(args)
+            .output()
+            .await
+            .unwrap()
+    };
+    let root = tmp.path().to_str().unwrap();
+    let output = run(vec![
+        "run".into(),
+        root.into(),
+        "--folder".into(),
+        "selected".into(),
+        "--reporter".into(),
+        "json".into(),
+    ])
+    .await;
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["totalRequests"], 1);
+    let output = run(vec![
+        "run".into(),
+        root.into(),
+        "--folder".into(),
+        "..".into(),
+    ])
+    .await;
+    assert!(!output.status.success());
+    let output = run(vec![
+        "run".into(),
+        root.into(),
+        "--reporter".into(),
+        "typo".into(),
+    ])
+    .await;
+    assert_eq!(output.status.code(), Some(2));
+    server.abort();
+}

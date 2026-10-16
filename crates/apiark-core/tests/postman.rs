@@ -95,12 +95,19 @@ fn unsupported_auth_body_and_methods_abort_instead_of_dropping_data() {
         json!({"method":"TRACE","url":"http://example.test"}),
         json!({"method":"GET","url":"http://example.test","auth":{"type":"oauth1"}}),
         json!({"method":"POST","url":"http://example.test","body":{"mode":"file","file":{"src":"synthetic.bin"}}}),
+        json!({"method":"GET","url":"http://example.test","header":"X-Test: raw unsupported"}),
     ] {
         assert!(parse_postman(
             &json!({"info":{"name":"Rejected"},"item":[{"name":"Rejected","request":request}]})
                 .to_string()
         )
         .is_err());
+    }
+    for event in [
+        json!({"listen":"test","disabled":true,"script":{"exec":["ark.test('skipped',()=>{})"]}}),
+        json!({"listen":"test","script":{"src":"https://example.test/script.js"}}),
+    ] {
+        assert!(parse_postman(&json!({"info":{"name":"Synthetic"},"item":[{"name":"Test","event":[event],"request":{"method":"GET","url":"http://example.test"}}]}).to_string()).is_err());
     }
 }
 
@@ -125,9 +132,9 @@ async fn scoped_scripts_variables_and_explicit_noauth_run_identically_in_core() 
     });
     let value = json!({"info":{"name":"Scope"},"variable":[{"key":"base","value":address}],
         "auth":{"type":"bearer","bearer":[{"key":"token","value":"must-not-send"}]},
-        "event":[{"listen":"prerequest","script":{"exec":["ark.env.set('trace','C');"]}}],
-        "item":[{"name":"Folder","event":[{"listen":"prerequest","script":{"exec":["ark.env.set('trace',ark.env.get('trace')+'F');"]}},{"listen":"test","script":{"exec":["ark.test('scope ran',()=>ark.expect(ark.response.body).to.equal('CFR'));"]}}],
-            "item":[{"name":"Request","event":[{"listen":"prerequest","script":{"exec":["ark.request.setHeader('x-trace',ark.env.get('trace')+'R');"]}}],"request":{"method":"GET","url":"{{base}}/","auth":{"type":"noauth"}}}]}]});
+        "event":[{"listen":"prerequest","script":{"exec":["const suffix='C';ark.env.set('trace',suffix);"]}}],
+        "item":[{"name":"Folder","event":[{"listen":"prerequest","script":{"exec":["const suffix='F';ark.env.set('trace',ark.env.get('trace')+suffix);"]}},{"listen":"test","script":{"exec":["ark.test('scope ran',()=>ark.expect(ark.response.body).to.equal('CFR'));"]}}],
+            "item":[{"name":"Request","event":[{"listen":"prerequest","script":{"exec":["const suffix='R';ark.request.setHeader('x-trace',ark.env.get('trace')+suffix);"]}}],"request":{"method":"GET","url":"{{base}}/","auth":{"type":"noauth"}}}]}]});
     let tmp = tempfile::tempdir().unwrap();
     let path = write_import(&parse_postman(&value.to_string()).unwrap(), tmp.path()).unwrap();
     let result = apiark_core::runner::run_collection(
@@ -149,4 +156,36 @@ async fn scoped_scripts_variables_and_explicit_noauth_run_identically_in_core() 
     assert_eq!(result.total_failed, 0);
     assert_eq!(result.iterations[0].results[0].test_count, 1);
     server.abort();
+}
+
+#[test]
+fn native_query_and_path_parameters_survive_export_and_removed_variables_stay_removed() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path=write_import(&parse_postman(&json!({"info":{"name":"CON"},"item":[{"name":"PRN","request":{"method":"GET","url":{"raw":"{{host}}/items/:id?already=yes#fragment","variable":[{"key":"id","value":"old"}]}}}]}).to_string()).unwrap(),tmp.path()).unwrap();
+    assert_eq!(std::path::Path::new(&path).file_name().unwrap(), "_con");
+    let file_path = std::path::Path::new(&path).join("_prn.yaml");
+    let mut file = read_request(&file_path).unwrap();
+    file.params = Some(std::collections::HashMap::from([
+        ("id".into(), "changed".into()),
+        ("query".into(), "a & + č".into()),
+    ]));
+    std::fs::write(&file_path, serde_yaml::to_string(&file).unwrap()).unwrap();
+    let exported = export_to_postman(std::path::Path::new(&path)).unwrap();
+    let reimported = parse_postman(&exported).unwrap();
+    let apiark_core::importer::ImportItem::Request { url, params, .. } = &reimported.items[0]
+    else {
+        panic!()
+    };
+    assert!(url.contains("query=a+%26+%2B+%C4%8D"), "{url}");
+    assert!(url.ends_with("#fragment"));
+    assert_eq!(params.as_ref().unwrap().len(), 1);
+    assert_eq!(params.as_ref().unwrap()["id"], "changed");
+    file.params = None;
+    std::fs::write(&file_path, serde_yaml::to_string(&file).unwrap()).unwrap();
+    let exported = export_to_postman(std::path::Path::new(&path)).unwrap();
+    let reimported = parse_postman(&exported).unwrap();
+    let apiark_core::importer::ImportItem::Request { params, .. } = &reimported.items[0] else {
+        panic!()
+    };
+    assert!(params.is_none());
 }

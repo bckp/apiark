@@ -301,3 +301,95 @@ async fn explicit_cookies_override_names_without_removing_other_jar_cookies() {
     assert!(!response.body.contains("sid=old"));
     task.abort();
 }
+
+#[tokio::test]
+async fn pre_request_variables_are_interpolated_after_mutation_in_all_request_fields() {
+    let (base, task) = server(Router::new().route(
+        "/new",
+        post(|headers: axum::http::HeaderMap, body: String| async move {
+            format!(
+                "{}|{}|{body}",
+                headers["x-value"].to_str().unwrap(),
+                headers["authorization"].to_str().unwrap()
+            )
+        }),
+    ))
+    .await;
+    let p: SendRequestParams = serde_json::from_value(serde_json::json!({"method":"POST","url":format!("{base}/{{{{value}}}}"),"headers":[{"key":"x-value","value":"{{value}}"}],"body":{"type":"raw","content":"{{value}}"},"auth":{"type":"bearer","token":"{{value}}"}})).unwrap();
+    let response = execute(
+        p,
+        &mut HashMap::from([("value".into(), "old".into())]),
+        None,
+        &CookieJarManager::new(),
+        Scripts {
+            pre_request: Some("ark.env.set('value','new')".into()),
+            ..Scripts::default()
+        },
+        |_| Ok(()),
+    )
+    .await
+    .unwrap();
+    assert_eq!(response.body, "new|Bearer new|new");
+    task.abort();
+}
+
+#[tokio::test]
+async fn visualization_outputs_are_bounded_across_phases_and_discarded_on_script_error() {
+    let (base, task) = server(Router::new().route("/", get(|| async { "ok" }))).await;
+    for (post, tests, pass, count) in [
+        (
+            "ark.visualize('text',{data:'post'})",
+            "ark.visualize('json',{data:{ok:true}})",
+            true,
+            2,
+        ),
+        (
+            "ark.visualize('text',{data:'post'})",
+            "throw new Error('synthetic')",
+            false,
+            0,
+        ),
+        (
+            "for(let i=0;i<3;i++)ark.visualize('text',{data:'post'})",
+            "for(let i=0;i<2;i++)ark.visualize('text',{data:'test'})",
+            false,
+            0,
+        ),
+    ] {
+        let response = execute(
+            params(&base),
+            &mut HashMap::new(),
+            None,
+            &CookieJarManager::new(),
+            Scripts {
+                post_response: Some(post.into()),
+                tests: Some(tests.into()),
+                ..Scripts::default()
+            },
+            |_| Ok(()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(response.body, "ok");
+        assert_eq!(response.visualizations.len(), count);
+        assert_eq!(response.test_results.iter().all(|t| t.passed), pass);
+    }
+    task.abort();
+}
+
+#[test]
+fn invalid_authentication_cannot_silently_send_an_unauthenticated_request() {
+    for auth in [
+        serde_json::json!({"type":"jwt-bearer","secret":"synthetic","algorithm":"HS256","payload":"bad-json","headerPrefix":"Bearer"}),
+        serde_json::json!({"type":"digest","username":"synthetic","password":"synthetic"}),
+        serde_json::json!({"type":"ntlm","username":"synthetic","password":"synthetic","domain":"test","workstation":"test"}),
+    ] {
+        let p: SendRequestParams = serde_json::from_value(
+            serde_json::json!({"method":"GET","url":"https://example.test/","auth":auth}),
+        )
+        .unwrap();
+        assert!(
+            apiark_core::http::request_builder::build_request(&reqwest::Client::new(), &p).is_err()
+        );
+    }
+}

@@ -188,7 +188,7 @@ pub fn build_request(
     }
 
     // Apply auth
-    builder = apply_auth(builder, &params.auth, params);
+    builder = apply_auth(builder, &params.auth, params)?;
 
     // Apply body
     builder = apply_body(builder, &params.body)?;
@@ -214,7 +214,7 @@ fn apply_auth(
     mut builder: RequestBuilder,
     auth: &Option<AuthConfig>,
     params: &SendRequestParams,
-) -> RequestBuilder {
+) -> Result<RequestBuilder, HttpEngineError> {
     match auth {
         Some(AuthConfig::Bearer { token }) => {
             builder = builder.bearer_auth(token);
@@ -234,17 +234,11 @@ fn apply_auth(
             add_to: ApiKeyLocation::Query,
             ..
         }) => {}
-        // OAuth2 is resolved before reaching here (converted to Bearer in interpolate_auth)
-        Some(AuthConfig::Oauth2 { .. }) => {}
-        // Digest auth — we store credentials; actual challenge-response is complex.
-        // For now, pre-compute a digest header if realm/nonce are provided (from a prior 401).
-        // In practice, most Digest flows need a two-step process; this provides the header
-        // when the user supplies the nonce/realm manually.
-        Some(AuthConfig::Digest { username, password }) => {
-            // Digest is typically challenge-response. We use basic auth as fallback
-            // so reqwest can handle the 401 challenge. For explicit digest, the user
-            // would need to supply nonce/realm which we don't collect in the UI yet.
-            builder = builder.basic_auth(username, Some(password));
+        Some(AuthConfig::Oauth2 { .. } | AuthConfig::Digest { .. } | AuthConfig::Ntlm { .. }) => {
+            return Err(HttpEngineError::RequestError(
+                "Authentication must be resolved to an explicit supported token before sending"
+                    .into(),
+            ))
         }
         Some(AuthConfig::AwsV4 {
             access_key,
@@ -254,8 +248,7 @@ fn apply_auth(
             session_token,
         }) => {
             let now = chrono::Utc::now();
-            let url = build_url_with_params(&params.url, &params.params, &params.auth)
-                .unwrap_or_else(|_| url::Url::parse("http://localhost").unwrap());
+            let url = build_url_with_params(&params.url, &params.params, &params.auth)?;
             let method = format!("{:?}", params.method);
             let headers: Vec<(String, String)> = params
                 .headers
@@ -302,30 +295,26 @@ fn apply_auth(
                 builder = builder.header("Authorization", value);
             }
             Err(e) => {
-                tracing::warn!("JWT generation failed: {e}");
+                return Err(HttpEngineError::RequestError(format!(
+                    "JWT generation failed: {e}"
+                )));
             }
         },
-        Some(AuthConfig::Ntlm {
-            domain,
-            workstation,
-            ..
-        }) => {
-            // First request sends Type 1 (Negotiate) message.
-            // If we get a 401 with a Type 2 challenge, the caller handles retry with Type 3.
-            let negotiate = auth_handlers::generate_ntlm_negotiate(domain, workstation);
-            builder = builder.header("Authorization", format!("NTLM {negotiate}"));
-        }
         Some(AuthConfig::Saml { saml_token, .. }) => {
             // SAML for API testing: the user obtains a SAML assertion/token from the IdP
             // externally (e.g. via browser SSO flow) and provides it here. We send it
             // as a Bearer token in the Authorization header.
             if !saml_token.is_empty() {
                 builder = builder.header("Authorization", format!("Bearer {saml_token}"));
+            } else {
+                return Err(HttpEngineError::RequestError(
+                    "SAML requires an explicit token".into(),
+                ));
             }
         }
         Some(AuthConfig::None) | None => {}
     }
-    builder
+    Ok(builder)
 }
 
 /// Apply request body.

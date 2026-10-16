@@ -27,6 +27,10 @@ enum Commands {
         /// Path to the collection directory
         collection: String,
 
+        /// Folder relative to the collection root
+        #[arg(long)]
+        folder: Option<String>,
+
         /// Environment name
         #[arg(short, long)]
         env: Option<String>,
@@ -44,7 +48,7 @@ enum Commands {
         data: Option<String>,
 
         /// Reporter format: cli (default), json, junit, html
-        #[arg(short, long, default_value = "cli")]
+        #[arg(short, long, default_value = "cli", value_parser = ["cli", "json", "junit", "html"])]
         reporter: String,
 
         /// Output file for reporter (stdout if not specified)
@@ -61,8 +65,8 @@ enum Commands {
         #[arg(short, long)]
         output: Option<String>,
 
-        /// Source format: postman, insomnia, openapi (auto-detected if omitted)
-        #[arg(short, long)]
+        /// Source format: Postman Collection v2.1 (auto-detected if omitted)
+        #[arg(short, long, value_parser = ["postman"])]
         format: Option<String>,
     },
 
@@ -71,8 +75,8 @@ enum Commands {
         /// Path to the collection directory
         collection: String,
 
-        /// Export format: postman, openapi
-        #[arg(short, long)]
+        /// Export format: Postman Collection v2.1
+        #[arg(short, long, value_parser = ["postman"])]
         format: String,
 
         /// Output file path
@@ -88,6 +92,7 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Commands::Run {
             collection,
+            folder,
             env,
             delay,
             iterations,
@@ -106,9 +111,15 @@ async fn main() -> anyhow::Result<()> {
                 eprintln!("{} {}", "Environment:".bold(), env_name);
             }
 
-            let summary =
-                runner::run_collection(&path, env.as_deref(), delay, iterations, data.as_deref())
-                    .await?;
+            let summary = runner::run_collection(
+                &path,
+                folder.as_deref(),
+                env.as_deref(),
+                delay,
+                iterations,
+                data.as_deref(),
+            )
+            .await?;
 
             // Print summary line
             eprintln!();
@@ -146,9 +157,7 @@ async fn main() -> anyhow::Result<()> {
                     write_output(&html, output.as_deref())?;
                 }
                 "cli" => {} // Already printed above
-                other => {
-                    eprintln!("Unknown reporter: {other}. Using cli.");
-                }
+                _ => unreachable!("reporter validated by clap"),
             }
 
             // Exit code: 0 = all pass, 1 = failures

@@ -5,6 +5,7 @@ use apiark_core::{
 use std::path::Path;
 pub async fn run_collection(
     path: &Path,
+    folder: Option<&str>,
     env: Option<&str>,
     delay: u64,
     iterations: u32,
@@ -12,7 +13,7 @@ pub async fn run_collection(
 ) -> anyhow::Result<RunSummary> {
     let config = RunConfig {
         collection_path: path.to_string_lossy().into(),
-        folder_path: None,
+        folder_path: folder.map(|f| path.join(f).to_string_lossy().into_owned()),
         environment_name: env.map(str::to_string),
         delay_ms: delay,
         iterations,

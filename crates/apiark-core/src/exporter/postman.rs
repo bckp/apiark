@@ -79,14 +79,53 @@ fn export_request(name: &str, req: &RequestFile) -> Result<Value, String> {
     };
     item["name"] = json!(name);
     request["method"] = json!(format!("{:?}", req.method));
-    if req.url != parse_url(original.get("url")).0 || original.get("url").is_none() {
-        request["url"] = json!({"raw":req.url});
-    }
-    if let Some(params) = &req.params {
-        if !request["url"].is_object() {
-            request["url"] = json!({"raw":req.url});
+    let (original_url, original_variables) = parse_url(original.get("url"));
+    let path = req.url.split(['?', '#']).next().unwrap_or("");
+    let (path_variables, query_params): (
+        std::collections::HashMap<_, _>,
+        std::collections::HashMap<_, _>,
+    ) = req
+        .params
+        .iter()
+        .flatten()
+        .partition(|(key, _)| path.split('/').any(|part| part == format!(":{key}")));
+    let mut export_url = req.url.clone();
+    if !query_params.is_empty() {
+        let (before_fragment, fragment) = export_url
+            .split_once('#')
+            .map(|(a, b)| (a.to_string(), format!("#{b}")))
+            .unwrap_or((export_url.clone(), String::new()));
+        let (base, query) = before_fragment
+            .split_once('?')
+            .unwrap_or((&before_fragment, ""));
+        let mut pairs: Vec<(String, String)> = url::form_urlencoded::parse(query.as_bytes())
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
+        for (key, value) in query_params {
+            if !pairs.iter().any(|(k, v)| k == key && v == value) {
+                pairs.push((key.clone(), value.clone()));
+            }
         }
-        request["url"]["variable"] = json!(params
+        let query = url::form_urlencoded::Serializer::new(String::new())
+            .extend_pairs(pairs)
+            .finish()
+            .replace("%7B%7B", "{{")
+            .replace("%7D%7D", "}}");
+        export_url = format!("{base}?{query}{fragment}");
+    }
+    if export_url != original_url || original.get("url").is_none() {
+        request["url"] = json!({"raw":export_url});
+    }
+    if path_variables
+        .iter()
+        .any(|(k, v)| original_variables.get(*k) != Some(*v))
+        || original_variables.len() != path_variables.len()
+        || (!path_variables.is_empty() && request["url"].get("variable").is_none())
+    {
+        if !request["url"].is_object() {
+            request["url"] = json!({"raw":export_url});
+        }
+        request["url"]["variable"] = json!(path_variables
             .iter()
             .map(|(k, v)| json!({"key":k,"value":v}))
             .collect::<Vec<_>>());
