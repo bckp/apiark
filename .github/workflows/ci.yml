@@ -1,54 +1,107 @@
-name: Internal fork CI
+name: CI
 on:
   push:
+    branches: [main, 'codex/**']
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
+  workflows:
+    name: Workflow validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -shellcheck=
   core-cli:
+    name: Core and CLI (${{ matrix.os }})
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-15, macos-15-intel, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: core-cli-${{ matrix.os }}
+          cache-on-failure: true
       - run: cargo fmt --all --check
       - run: cargo test -p apiark-core -p apiark-cli --locked
       - run: cargo clippy -p apiark-core -p apiark-cli --all-targets --locked
       - run: cargo build -p apiark-cli --release --locked --target-dir target/cli
       - run: tar -czf apiark-${{ runner.os }}-${{ runner.arch }}.tar.gz -C target/cli/release apiark${{ runner.os == 'Windows' && '.exe' || '' }} -C "${{ github.workspace }}" LICENSE
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: cli-${{ runner.os }}-${{ runner.arch }}
           path: apiark-*.tar.gz
+          if-no-files-found: error
+          retention-days: 14
   desktop:
-    runs-on: macos-latest
+    name: Desktop (${{ matrix.os }})
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: fish --no-config {0}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: pnpm/action-setup@v4
+      - name: Install Fish
+        shell: sh
+        run: brew install fish
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: desktop-${{ matrix.os }}
+          cache-on-failure: true
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 11.25.0
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @apiark/desktop test
       - run: pnpm --filter @apiark/desktop lint
       - run: cargo test -p apiark --lib --locked
+      - run: cargo check -p apiark --locked
       - run: pnpm --filter @apiark/desktop tauri build --debug --bundles app --no-sign --ci
       - run: tar -czf ApiArk-Internal-macOS.tar.gz -C target/debug/bundle/macos "ApiArk Internal.app" -C "${{ github.workspace }}" LICENSE
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-macOS-${{ runner.arch }}-unsigned
           path: ApiArk-Internal-macOS.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+  required:
+    name: CI required
+    if: always()
+    needs: [workflows, core-cli, desktop]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every test and build job to pass
+        env:
+          WORKFLOWS_RESULT: ${{ needs.workflows.result }}
+          CORE_RESULT: ${{ needs.core-cli.result }}
+          DESKTOP_RESULT: ${{ needs.desktop.result }}
+        run: test "$WORKFLOWS_RESULT" = success && test "$CORE_RESULT" = success && test "$DESKTOP_RESULT" = success

@@ -111,17 +111,32 @@ download velkých streamů není implementovaný.
 
 ## CI
 
-Pro macOS jsou v `.github/workflows/ci.yml` připravené testy a release build
-CLI a test/build desktopu. Artefakty jsou tar archivy, aby se zachovala
+V `.github/workflows/ci.yml` jsou testy a release build CLI na macOS arm64,
+macOS Intel, Linuxu a Windows. Desktop se testuje a sestavuje na obou typech
+Maců; jiné desktopové platformy se nesestavují. Artefakty jsou tar archivy, aby se zachovala
 práva spustitelných souborů; obsahují také původní `LICENSE` s copyrightem.
 Při ruční distribuci aplikace nebo CLI přibal stejný licenční soubor.
-Běžná CI nic nepublikuje a nemá distribuční tajné údaje.
+Běžná CI nic nepublikuje a nemá distribuční tajné údaje. Spouští se při
+pushi do `main`/`codex/**`, při pull requestu a ručně. Agregovaný check
+`CI required` projde pouze při úspěchu všech testů, buildů a validace workflow.
+Přerušený nebo přeskočený job se nebere jako úspěch. Starší souběžný běh
+stejné větve se ruší. Rust cache je oddělená podle systému a typu buildu;
+artefakty běžné CI zůstávají dostupné 14 dní.
 Původní release, nightly, benchmark a package-manager workflow jsou odstraněné.
 Nový ručně spouštěný workflow je popsaný níže.
 
-Definice jsou pro GitHub Actions. Origin zatím zůstává na Forgejo
-`code.kepakovi.cz`; přesun repozitáře ani hostovaný běh nového workflow
-neproběhl. Podporu Actions na Forgejo zde nepředpokládáme.
+Definice jsou pro GitHub Actions v `bckp/apiark`. Git remote `github` ukazuje
+na tento veřejný fork, `origin` zůstává na Forgejo `code.kepakovi.cz`.
+Push na Forgejo sám GitHub CI nespouští; změny určené pro CI posílej na GitHub.
+Podporu Actions na Forgejo zde nepředpokládáme.
+
+```fish
+git push github HEAD:main
+gh run list --repo bckp/apiark --workflow ci.yml
+```
+
+Vývojové změny je vhodné posílat na větev a do `main` přes pull request.
+Nepřepisuj historii main ani již vydané tagy.
 
 ## Podpis a notarizace
 

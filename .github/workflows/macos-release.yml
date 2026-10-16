@@ -54,6 +54,10 @@ jobs:
         with:
           components: rustfmt, clippy
           targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          shared-key: signed-macos-${{ matrix.arch }}
+          cache-on-failure: true
       - run: pnpm install --frozen-lockfile
       - name: Check the native build and shared runtime before signing
         run: fish scripts/check.fish
