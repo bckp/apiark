@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useEnvironmentStore } from "@/stores/environment-store";
 import type { HttpMethod, EnvironmentData } from "@apiark/types";
-import { Loader2, Send, AlertCircle, Check } from "lucide-react";
+import { Loader2, Send, AlertCircle, Check, ChevronsUpDown } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { HintTooltip } from "@/components/ui/hint-tooltip";
 import { saveEnvironment } from "@/lib/tauri-api";
@@ -308,10 +308,12 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
   return (
     <div data-tour="url-bar" className="flex items-center gap-3 bg-[var(--color-card)] px-4 py-3">
       {/* HTTP method */}
+      <div className="relative shrink-0">
         <select
+          aria-label="HTTP method"
           value={tab.method}
           onChange={(e) => setMethod(e.target.value as HttpMethod)}
-          className={`${METHOD_COLORS[tab.method]} ${METHOD_BG[tab.method]} cursor-pointer rounded-lg px-3 py-2 text-sm font-bold outline-none transition-colors focus:ring-2 focus:ring-[var(--color-accent)]/50`}
+          className={`${METHOD_COLORS[tab.method]} ${METHOD_BG[tab.method]} h-10 appearance-none cursor-pointer rounded-lg border border-transparent pl-3 pr-9 text-sm font-bold outline-none transition-colors focus:ring-2 focus:ring-[var(--color-accent)]/50`}
         >
           {METHODS.map((m) => (
             <option key={m} value={m} className="text-[var(--color-text-primary)] bg-[var(--color-elevated)]">
@@ -319,6 +321,8 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
             </option>
           ))}
         </select>
+        <ChevronsUpDown aria-hidden="true" className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 ${METHOD_COLORS[tab.method]}`} />
+      </div>
 
       {/* URL input with variable highlighting overlay */}
       <div className="relative flex-1">
@@ -332,7 +336,7 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
           onBlur={() => setInputFocused(false)}
           disabled={urlDisabled}
           placeholder={t("request.urlPlaceholder")}
-          className={`w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-elevated)] px-4 py-2 text-sm outline-none transition-all focus:border-[var(--color-accent)]/50 focus:ring-2 focus:ring-[var(--color-accent)]/20 disabled:opacity-60 ${
+          className={`h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-elevated)] px-4 py-2 text-sm outline-none transition-all focus:border-[var(--color-accent)]/50 focus:ring-2 focus:ring-[var(--color-accent)]/20 disabled:opacity-60 ${
             hasVariablesInUrl && !inputFocused
               ? "text-transparent caret-[var(--color-text-primary)]"
               : "text-[var(--color-text-primary)]"
