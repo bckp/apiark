@@ -765,20 +765,15 @@ function EnvironmentsPanel({
     activeEnvironmentName,
     setActiveEnvironment,
     loadEnvironments,
+    activeCollectionPath: collectionPath,
   } = useEnvironmentStore();
-  const { collections } = useCollectionStore();
   const [editingEnv, setEditingEnv] = useState<EnvironmentData | null>(null);
   const [newEnvOpen, setNewEnvOpen] = useState(false);
 
-  const collectionPath =
-    collections.find((c) => c.type === "collection")?.path ?? null;
-
-  // Load environments when panel mounts with a collection
   useEffect(() => {
-    if (collectionPath) {
-      loadEnvironments(collectionPath);
-    }
-  }, [collectionPath, loadEnvironments]);
+    setEditingEnv(null);
+    setNewEnvOpen(false);
+  }, [collectionPath]);
 
   const handleSave = async (env: EnvironmentData) => {
     if (!collectionPath) return;

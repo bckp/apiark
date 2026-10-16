@@ -25,6 +25,7 @@ import {
 } from "@/stores/tab-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useCollectionStore } from "@/stores/collection-store";
+import { useEnvironmentStore } from "@/stores/environment-store";
 import { useConsoleStore } from "@/stores/console-store";
 import { useTheme } from "@/hooks/use-theme";
 import { useAutoSave } from "@/hooks/use-auto-save";
@@ -74,6 +75,16 @@ export default function App() {
   const active = useActiveTab();
   const tabs = useTabStore((s) => s.tabs);
   const activeId = useTabStore((s) => s.activeTabId);
+  const collections = useCollectionStore((s) => s.collections);
+  const environmentCollection =
+    active?.collectionPath ?? collections[0]?.path ?? null;
+  useEffect(() => {
+    if (environmentCollection)
+      void useEnvironmentStore
+        .getState()
+        .loadEnvironments(environmentCollection);
+    else useEnvironmentStore.getState().setActiveCollectionPath(null);
+  }, [environmentCollection]);
   const settings = useSettingsStore((s) => s.settings);
   const { autoSaveError } = useAutoSave();
   const [view, setView] = useState<ActivityView>("collections");

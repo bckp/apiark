@@ -430,6 +430,8 @@ export interface PersistedState {
 // ── Tab ──
 
 export interface Tab {
+  description?: string;
+  cookies?: Record<string, string>;
   authInherited?: boolean;
   postman?: unknown;
   id: string;

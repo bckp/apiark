@@ -26,7 +26,7 @@ vi.mock("@/stores/console-store", () => ({
 }));
 
 import { useTabStore } from "@/stores/tab-store";
-import { sendRequestWithScripts } from "@/lib/tauri-api";
+import { sendRequestWithScripts, readRequestFile } from "@/lib/tauri-api";
 
 function scriptedResponse(text: string) {
   return {
@@ -149,14 +149,36 @@ describe("Tab Store", () => {
     expect(state.tabs[0].name).toBe("Untitled Request");
     expect(state.activeTabId).toBe(state.tabs[0].id);
   });
-  it("creates a complete imported request without modifying another tab", () => {
-    useTabStore
+  it("preserves native request cookies and descriptions when opening and sending", async () => {
+    vi.mocked(readRequestFile).mockResolvedValueOnce({
+      name: "Synthetic",
+      method: "GET",
+      url: "https://example.test/",
+      headers: {},
+      description: "Preserve metadata",
+      cookies: { sid: "synthetic" },
+    });
+    vi.mocked(sendRequestWithScripts).mockResolvedValueOnce(
+      scriptedResponse("ok"),
+    );
+    await useTabStore
       .getState()
-      .newTab({
-        url: "https://example.test/old",
-        body: { type: "json", content: "old", formData: [] },
-        preRequestScript: "old script",
-      });
+      .openTab("/synthetic/request.yaml", "/synthetic");
+    await useTabStore.getState().send();
+    expect(useTabStore.getState().tabs[0]).toMatchObject({
+      description: "Preserve metadata",
+      cookies: { sid: "synthetic" },
+    });
+    expect(
+      vi.mocked(sendRequestWithScripts).mock.lastCall?.[0].cookies,
+    ).toEqual({ sid: "synthetic" });
+  });
+  it("creates a complete imported request without modifying another tab", () => {
+    useTabStore.getState().newTab({
+      url: "https://example.test/old",
+      body: { type: "json", content: "old", formData: [] },
+      preRequestScript: "old script",
+    });
     const previous = useTabStore.getState().tabs[0];
     useTabStore
       .getState()

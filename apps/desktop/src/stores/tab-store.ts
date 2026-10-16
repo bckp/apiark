@@ -327,6 +327,8 @@ function requestFileToTab(
     body,
     auth: file.auth || { type: "none" },
     authInherited: file.auth === undefined || file.auth === null,
+    description: file.description,
+    cookies: file.cookies,
     preRequestScript: file.preRequestScript ?? null,
     postResponseScript: file.postResponseScript ?? null,
     testScript: file.tests ?? null,
@@ -378,6 +380,8 @@ function tabToRequestFile(tab: Tab): RequestFile {
 
   return {
     postman: tab.postman,
+    description: tab.description,
+    cookies: tab.cookies,
     name: tab.name,
     method: tab.method,
     url: tab.url, // URL already contains query params (synced)
@@ -642,7 +646,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       const envStore = useEnvironmentStore.getState();
       const environmentName = envStore.activeEnvironmentName;
       const environmentCollection = envStore.activeCollectionPath;
-      const variables = await envStore.getResolvedVariables();
+      const variables = await envStore.getResolvedVariables(tab.collectionPath);
       if (!current()) return;
 
       // Get network settings
@@ -667,6 +671,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       );
 
       const requestParams = {
+        cookies: tab.cookies,
         method: tab.method,
         url: resolvedUrl,
         headers,

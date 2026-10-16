@@ -273,6 +273,30 @@ async fn binary_response_preserves_exact_bytes_without_creating_temp_files() {
     task.abort();
 }
 
+#[tokio::test]
+async fn jpeg_inside_json_is_visualized_by_the_post_response_script() {
+    use base64::Engine;
+    let mut jpeg = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::new_rgb8(3, 2)
+        .write_to(&mut jpeg, image::ImageFormat::Jpeg)
+        .unwrap();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(jpeg.into_inner());
+    let (base, task) = server(Router::new().route(
+        "/",
+        get(move || {
+            let value = encoded.clone();
+            async move { axum::Json(serde_json::json!({"result":[{"data":value}]})) }
+        }),
+    ))
+    .await;
+    let result=execute(params(&base),&mut HashMap::new(),None,&CookieJarManager::new(),Scripts {post_response:Some("ark.visualize('image',{name:'JPEG from JSON',mimeType:'image/jpeg',data:ark.response.json().result[0].data});".into()),..Scripts::default()}, |_|Ok(())).await.unwrap();
+    assert!(result.test_results.iter().all(|test| test.passed));
+    assert!(
+        matches!(&result.visualizations[0],apiark_core::scripting::visualization::Visualization::Image {width:3,height:2,mime_type,..} if mime_type=="image/png")
+    );
+    task.abort();
+}
+
 #[test]
 fn infinite_scripts_and_async_tests_cannot_pass() {
     let context = || ScriptContext {

@@ -1,24 +1,12 @@
-import { useEffect, forwardRef } from "react";
+import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useEnvironmentStore } from "@/stores/environment-store";
-import { useCollectionStore } from "@/stores/collection-store";
 
 export const EnvironmentSelector = forwardRef<HTMLSelectElement>(
   function EnvironmentSelector(_props, ref) {
     const { t } = useTranslation();
-    const { environments, activeEnvironmentName, setActiveEnvironment, loadEnvironments } =
+    const { environments, activeEnvironmentName, setActiveEnvironment } =
       useEnvironmentStore();
-    const { collections } = useCollectionStore();
-
-    // Load environments when collections change
-    useEffect(() => {
-      if (collections.length > 0) {
-        const firstCollection = collections[0];
-        if (firstCollection.type === "collection") {
-          loadEnvironments(firstCollection.path);
-        }
-      }
-    }, [collections, loadEnvironments]);
 
     if (environments.length === 0) {
       return (
@@ -33,9 +21,7 @@ export const EnvironmentSelector = forwardRef<HTMLSelectElement>(
         ref={ref}
         data-tour="environment"
         value={activeEnvironmentName ?? ""}
-        onChange={(e) =>
-          setActiveEnvironment(e.target.value || null)
-        }
+        onChange={(e) => setActiveEnvironment(e.target.value || null)}
         className="w-full rounded bg-[var(--color-elevated)] px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:ring-1 focus:ring-blue-500"
       >
         <option value="">{t("environment.noEnvironment")}</option>
