@@ -82,6 +82,11 @@ pub async fn execute(
         .and_then(|p| collection::load_collection_config(std::path::Path::new(p)).ok())
         .map(|c| c.defaults)
         .unwrap_or_default();
+    if defaults.persist_cookies {
+        if let Some(path) = collection_path {
+            cookie_jar.load_from_disk(path)?;
+        }
+    }
     if interpolated.auth.is_none() {
         interpolated.auth = scopes.auth.as_ref().map(|a| interpolate_auth(a, &vars));
     }

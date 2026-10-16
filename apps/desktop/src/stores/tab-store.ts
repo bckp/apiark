@@ -564,8 +564,8 @@ export const useTabStore = create<TabState>((set, get) => ({
       : undefined;
 
     // Build body — for GraphQL, construct from graphql state
-    let body = tab.body.type !== "none" ? tab.body : undefined;
-    let headers = tab.headers.filter((h) => h.key.trim() !== "" && h.enabled);
+    const body = tab.body.type !== "none" ? tab.body : undefined;
+    const headers = tab.headers.filter((h) => h.key.trim() !== "" && h.enabled);
     // Resolve path variables (:paramName → value) in the URL before sending
     const resolvedUrl = resolvePathVariables(tab.url.trim(), tab.pathVariables);
 

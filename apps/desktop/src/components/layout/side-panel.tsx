@@ -1046,4 +1046,3 @@ function NewEnvironmentDialog({
     </Dialog.Root>
   );
 }
-

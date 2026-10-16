@@ -551,4 +551,3 @@ function DesignTokensSection() {
     </section>
   );
 }
-

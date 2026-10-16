@@ -70,4 +70,3 @@ harness = false
 [[bench]]
 name = "assertions"
 harness = false
-

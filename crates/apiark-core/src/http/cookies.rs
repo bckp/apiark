@@ -184,6 +184,10 @@ impl CookieJarManager {
 
     /// Load cookie jar from disk.
     pub fn load_from_disk(&self, collection_path: &str) -> Result<(), String> {
+        let mut jars = self.jars.write().map_err(|e| format!("Lock error: {e}"))?;
+        if jars.contains_key(collection_path) {
+            return Ok(());
+        }
         let cookies_dir = dirs::home_dir()
             .ok_or("Could not determine home directory")?
             .join(".apiark-internal")
@@ -193,6 +197,7 @@ impl CookieJarManager {
         let path = cookies_dir.join(format!("{hash}.json"));
 
         if !path.exists() {
+            jars.insert(collection_path.to_string(), Vec::new());
             return Ok(());
         }
 
@@ -202,7 +207,6 @@ impl CookieJarManager {
         let cookies: Vec<CookieEntry> =
             serde_json::from_str(&json).map_err(|e| format!("Failed to parse cookies: {e}"))?;
 
-        let mut jars = self.jars.write().map_err(|e| format!("Lock error: {e}"))?;
         jars.insert(collection_path.to_string(), cookies);
 
         Ok(())

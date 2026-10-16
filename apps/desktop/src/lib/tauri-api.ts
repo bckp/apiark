@@ -455,4 +455,3 @@ export async function updateSettings(
 export async function openNewWindow(): Promise<string> {
   return await invoke<string>("open_new_window", {});
 }
-

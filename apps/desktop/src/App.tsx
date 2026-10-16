@@ -1,4 +1,4 @@
-import {useEffect,useState,useRef,lazy,Suspense} from "react";
+import {useEffect,useState,useRef,useCallback,lazy,Suspense} from "react";
 import {ActivityBar,type ActivityView} from "@/components/layout/activity-bar";
 import {SidePanel} from "@/components/layout/side-panel";
 import {TabBar} from "@/components/tabs/tab-bar";
@@ -43,7 +43,7 @@ export default function App(){
     const before=(e:BeforeUnloadEvent)=>{useTabStore.getState().persistTabs();if(useTabStore.getState().hasUnsavedNewTabs())e.preventDefault();};
     window.addEventListener("beforeunload",before);return ()=>window.removeEventListener("beforeunload",before);
   },[]);
-  const save=()=>{if(active?.filePath)void useTabStore.getState().save();else setDialog("save");};
+  const save=useCallback(()=>{const state=useTabStore.getState();const tab=state.tabs.find(t=>t.id===state.activeTabId);if(tab?.filePath)void state.save();else setDialog("save");},[]);
   useEffect(()=>{
     const key=(e:KeyboardEvent)=>{if(!(e.metaKey||e.ctrlKey))return;
       if(e.key==="Enter"){e.preventDefault();void useTabStore.getState().send();}
@@ -53,7 +53,7 @@ export default function App(){
       else if(e.key===","){e.preventDefault();setDialog("settings");}
       else if(e.shiftKey&&e.key.toLowerCase()==="z"){e.preventDefault();setZen(v=>!v);}
     };window.addEventListener("keydown",key);return ()=>window.removeEventListener("keydown",key);
-  },[active]);
+  },[save]);
   const horizontal=settings.layout==="horizontal";const ratio=Math.min(.8,Math.max(.2,settings.panelRatio??.5));
   return <div className="flex h-screen flex-col overflow-hidden bg-[var(--color-bg)] text-[var(--color-text-primary)]">
     <header data-tauri-drag-region className="flex h-[52px] shrink-0 items-center gap-1 border-b border-[var(--color-border)] bg-[var(--color-surface)] pl-[106px] pr-3">

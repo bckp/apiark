@@ -44,6 +44,11 @@ export function ResponsePanel() {
     [testResults, assertionResults],
   );
 
+  const language=useMemo(()=>getLanguageFromHeaders(tab?.response?.headers??[]),[tab?.response?.headers]);
+  const formattedBody=useMemo(()=>{
+    const body=tab?.response?.body??"";
+    return activeTab==="body"&&body.length<=1024*1024?tryFormatBody(body,language):body;
+  },[tab?.response?.body,language,activeTab]);
   if (!tab) return null;
 
   const { response, error, loading, consoleOutput } = tab;
@@ -139,8 +144,6 @@ export function ResponsePanel() {
       {response && (
         <div className={`flex-1 animate-fade-in ${activeTab === "body" ? "flex min-h-0 flex-col p-3 pb-0" : "overflow-auto p-3"}`}>
         {activeTab === "body" && (() => {
-          const language = getLanguageFromHeaders(response.headers);
-          const formattedBody = tryFormatBody(response.body, language);
           return (
             <>
               <ResponseBodyActions body={formattedBody} />

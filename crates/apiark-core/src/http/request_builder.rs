@@ -9,9 +9,33 @@ use crate::models::request::{BodyType, KeyValuePair, RequestBody, SendRequestPar
 
 /// Default timeout: 30 seconds.
 const DEFAULT_TIMEOUT_MS: u64 = 30_000;
+type ClientKey = (u64, bool, bool);
+static CLIENTS: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::VecDeque<(ClientKey, Client)>>,
+> = std::sync::OnceLock::new();
 
 /// Build a reqwest Client from request params.
 pub fn build_client(params: &SendRequestParams) -> Result<Client, HttpEngineError> {
+    let cacheable = params.proxy.is_none()
+        && params.ca_cert_path.is_none()
+        && params.client_cert_path.is_none()
+        && params.client_key_path.is_none();
+    let key = (
+        params.timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS),
+        params.follow_redirects,
+        params.verify_ssl,
+    );
+    let cache = CLIENTS.get_or_init(Default::default);
+    if cacheable {
+        if let Some((_, client)) = cache
+            .lock()
+            .map_err(|e| HttpEngineError::RequestError(e.to_string()))?
+            .iter()
+            .find(|(k, _)| k == &key)
+        {
+            return Ok(client.clone());
+        }
+    }
     let timeout = Duration::from_millis(params.timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS));
 
     let mut builder = Client::builder()
@@ -82,9 +106,19 @@ pub fn build_client(params: &SendRequestParams) -> Result<Client, HttpEngineErro
         builder = builder.proxy(reqwest_proxy);
     }
 
-    builder
-        .build()
-        .map_err(|e| HttpEngineError::RequestError(format!("Failed to build HTTP client: {}", e)))
+    let client = builder.build().map_err(|e| {
+        HttpEngineError::RequestError(format!("Failed to build HTTP client: {}", e))
+    })?;
+    if cacheable {
+        let mut clients = cache
+            .lock()
+            .map_err(|e| HttpEngineError::RequestError(e.to_string()))?;
+        if clients.len() >= 8 {
+            clients.pop_front();
+        }
+        clients.push_back((key, client.clone()));
+    }
+    Ok(client)
 }
 
 /// Build the full URL with query parameters appended.
