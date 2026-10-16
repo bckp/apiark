@@ -6,7 +6,6 @@ pub mod environment;
 pub mod history;
 pub mod http;
 pub mod import_export;
-pub mod migration;
 pub mod oauth;
 pub mod runner;
 pub mod settings;

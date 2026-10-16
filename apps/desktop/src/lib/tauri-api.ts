@@ -198,22 +198,6 @@ export async function updateCollectionDefaults(
   });
 }
 
-// ── Migration ──
-
-export async function checkCollectionVersion(
-  collectionPath: string,
-): Promise<import("@apiark/types").VersionStatus> {
-  return await invoke<import("@apiark/types").VersionStatus>("check_collection_version", {
-    collectionPath,
-  });
-}
-
-export async function migrateCollection(
-  collectionPath: string,
-): Promise<number> {
-  return await invoke<number>("migrate_collection", { collectionPath });
-}
-
 // ── Environments ──
 
 export async function loadEnvironments(
@@ -430,9 +414,6 @@ export async function unwatchCollection(collectionPath: string): Promise<void> {
 
 // ── Sample Collection ──
 
-export async function createSampleCollection(): Promise<string> {
-  return await invoke<string>("create_sample_collection", {});
-}
 
 export async function createCollection(parentDir: string, name: string): Promise<string> {
   return await invoke<string>("create_collection", { parentDir, name });

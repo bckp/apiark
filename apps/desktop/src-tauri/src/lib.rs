@@ -5,9 +5,9 @@ mod runner;
 mod watcher;
 use commands::backup::{export_app_state, import_app_state};
 use commands::collection::{
-    create_collection, create_folder, create_request, create_sample_collection, delete_item,
-    get_collection_defaults, open_collection, read_request_file, rename_item, save_folder_order,
-    save_request_file, update_collection_defaults,
+    create_collection, create_folder, create_request, delete_item, get_collection_defaults,
+    open_collection, read_request_file, rename_item, save_folder_order, save_request_file,
+    update_collection_defaults,
 };
 use commands::cookies::{clear_cookie_jar, delete_cookie, get_cookie_jar};
 use commands::curl::{export_curl_command, parse_curl_command};
@@ -19,7 +19,6 @@ use commands::http::{send_request, send_request_with_scripts};
 use commands::import_export::{
     detect_import_format, export_collection, import_collection, import_environment, import_preview,
 };
-use commands::migration::{check_collection_version, migrate_collection};
 use commands::oauth::{oauth_clear_token, oauth_get_token_status, oauth_start_flow};
 use commands::runner::run_collection_command;
 use commands::settings::{get_settings, update_settings};
@@ -91,7 +90,6 @@ pub fn run() {
             delete_item,
             save_folder_order,
             rename_item,
-            create_sample_collection,
             create_collection,
             get_cookie_jar,
             delete_cookie,
@@ -113,8 +111,6 @@ pub fn run() {
             import_collection,
             export_collection,
             import_environment,
-            check_collection_version,
-            migrate_collection,
             oauth_start_flow,
             oauth_get_token_status,
             oauth_clear_token,

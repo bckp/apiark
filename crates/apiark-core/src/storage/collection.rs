@@ -16,10 +16,7 @@ pub fn load_collection_tree(collection_path: &Path) -> Result<CollectionNode, St
         ));
     }
 
-    let config_content = fs::read_to_string(&config_path)
-        .map_err(|e| format!("Failed to read collection config: {e}"))?;
-    let config: CollectionConfig = serde_yaml::from_str(&config_content)
-        .map_err(|e| format!("Invalid collection config YAML: {e}"))?;
+    let config = load_collection_config(collection_path)?;
 
     let children = scan_directory(collection_path)?;
 
@@ -343,7 +340,12 @@ pub fn load_collection_config(collection_path: &Path) -> Result<CollectionConfig
     let config_path = collection_path.join(".apiark").join("apiark.yaml");
     let content = fs::read_to_string(&config_path)
         .map_err(|e| format!("Failed to read collection config: {e}"))?;
-    serde_yaml::from_str(&content).map_err(|e| format!("Invalid collection config YAML: {e}"))
+    let config: CollectionConfig = serde_yaml::from_str(&content)
+        .map_err(|e| format!("Invalid collection config YAML: {e}"))?;
+    if config.version != 1 {
+        return Err(format!("Unsupported collection format version {}; this fork supports version 1. No files were changed.",config.version));
+    }
+    Ok(config)
 }
 
 /// Save the collection config to .apiark/apiark.yaml (atomic write).
@@ -366,4 +368,26 @@ fn atomic_write(path: &Path, content: &str) -> Result<(), String> {
         let _ = fs::remove_file(&tmp_path);
         format!("Failed to rename temp file: {e}")
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn unsupported_collection_versions_fail_before_loading_requests_or_writing_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir(tmp.path().join(".apiark")).unwrap();
+        let path = tmp.path().join(".apiark/apiark.yaml");
+        for version in [0, 2] {
+            let content = format!("name: Synthetic\nversion: {version}\n");
+            fs::write(&path, &content).unwrap();
+            assert!(load_collection_config(tmp.path())
+                .unwrap_err()
+                .contains("Unsupported collection format"));
+            assert!(load_collection_tree(tmp.path()).is_err());
+            assert_eq!(fs::read_to_string(&path).unwrap(), content);
+        }
+        fs::write(&path, "name: Synthetic\n").unwrap();
+        assert_eq!(load_collection_config(tmp.path()).unwrap().version, 1);
+    }
 }

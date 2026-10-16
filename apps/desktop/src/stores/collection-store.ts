@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { CollectionNode, VersionStatus } from "@apiark/types";
+import type { CollectionNode } from "@apiark/types";
 import {
   openCollection as openCollectionApi,
   createRequest as createRequestApi,
@@ -9,24 +9,12 @@ import {
   watchCollection,
   unwatchCollection,
   restoreFromTrash,
-  checkCollectionVersion,
-  migrateCollection as migrateCollectionApi,
 } from "@/lib/tauri-api";
 import { useUndoStore } from "./undo-store";
-
-interface MigrationPrompt {
-  path: string;
-  status: VersionStatus;
-}
 
 interface CollectionState {
   collections: CollectionNode[];
   expandedPaths: Set<string>;
-  /** Collections opened in read-only mode (version mismatch, user declined migration) */
-  readOnlyPaths: Set<string>;
-  /** Pending migration prompt — shown as a dialog */
-  migrationPrompt: MigrationPrompt | null;
-
   openCollection: (path: string) => Promise<void>;
   closeCollection: (path: string) => void;
   refreshCollection: (path: string) => Promise<void>;
@@ -53,9 +41,6 @@ interface CollectionState {
     collectionPath: string,
   ) => Promise<string>;
   undoLastAction: () => Promise<void>;
-  dismissMigration: () => void;
-  acceptMigration: () => Promise<void>;
-  openReadOnly: () => Promise<void>;
 }
 
 // Track in-flight openCollection calls to prevent race-condition duplicates
@@ -64,8 +49,6 @@ const openingPaths = new Set<string>();
 export const useCollectionStore = create<CollectionState>((set, get) => ({
   collections: [],
   expandedPaths: new Set<string>(),
-  readOnlyPaths: new Set<string>(),
-  migrationPrompt: null,
 
   openCollection: async (path) => {
     // Don't open the same collection twice (or concurrently)
@@ -76,22 +59,6 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
     openingPaths.add(path);
 
     try {
-      // Check version before opening
-      const status = await checkCollectionVersion(path);
-
-      if (status.isNewer) {
-        // Collection was created with a newer version of ApiArk
-        set({ migrationPrompt: { path, status } });
-        return;
-      }
-
-      if (status.needsMigration) {
-        // Collection needs migration — prompt user
-        set({ migrationPrompt: { path, status } });
-        return;
-      }
-
-      // Version matches — open normally
       const tree = await openCollectionApi(path);
       set((state) => ({
         collections: [...state.collections, tree],
@@ -107,52 +74,6 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
       throw err;
     } finally {
       openingPaths.delete(path);
-    }
-  },
-
-  dismissMigration: () => {
-    set({ migrationPrompt: null });
-  },
-
-  acceptMigration: async () => {
-    const prompt = get().migrationPrompt;
-    if (!prompt) return;
-
-    try {
-      await migrateCollectionApi(prompt.path);
-      set({ migrationPrompt: null });
-      // Now open the migrated collection
-      const tree = await openCollectionApi(prompt.path);
-      set((state) => ({
-        collections: [...state.collections, tree],
-        expandedPaths: new Set([...state.expandedPaths, prompt.path]),
-      }));
-      watchCollection(prompt.path).catch((err) =>
-        console.warn("Failed to start file watcher:", err),
-      );
-    } catch (err) {
-      import("@/stores/toast-store").then(({ useToastStore }) =>
-        useToastStore.getState().showError(`Collection migration failed: ${err}`),
-      );
-    }
-  },
-
-  openReadOnly: async () => {
-    const prompt = get().migrationPrompt;
-    if (!prompt) return;
-
-    try {
-      set({ migrationPrompt: null });
-      const tree = await openCollectionApi(prompt.path);
-      set((state) => ({
-        collections: [...state.collections, tree],
-        expandedPaths: new Set([...state.expandedPaths, prompt.path]),
-        readOnlyPaths: new Set([...state.readOnlyPaths, prompt.path]),
-      }));
-    } catch (err) {
-      import("@/stores/toast-store").then(({ useToastStore }) =>
-        useToastStore.getState().showError(`Failed to open collection: ${err}`),
-      );
     }
   },
 
@@ -287,7 +208,7 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
         watchCollection(newPath).catch(() => {});
         // Persist the updated collections immediately
         useTabStore.getState().persistTabs();
-      } catch (err) {
+      } catch {
         // If reopen fails, try the close+open approach
         get().closeCollection(collectionPath);
         await get().openCollection(newPath);
