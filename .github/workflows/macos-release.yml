@@ -1,0 +1,151 @@
+name: Signed macOS preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_draft:
+        description: Create a draft prerelease after both signed builds pass
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    environment: macos-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            arch: arm64
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: fish --no-config {0}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install Fish
+        shell: sh
+        run: brew install fish
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          components: rustfmt, clippy
+          targets: ${{ matrix.target }}
+      - run: pnpm install --frozen-lockfile
+      - name: Check the native build and shared runtime before signing
+        run: fish scripts/check.fish
+      - name: Read and validate release version
+        id: version
+        run: |
+          set -l release_version (python3 -c 'import json; print(json.load(open("apps/desktop/src-tauri/tauri.conf.json"))["version"])')
+          string match -rq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' -- "$release_version"; or exit 1
+          printf 'version=%s\n' "$release_version" >> "$GITHUB_OUTPUT"
+      - name: Require signing and notarization configuration
+        env: &apple_credentials
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          for release_setting in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
+              if not set -q $release_setting; or test -z "$$release_setting"
+                  printf 'Missing release setting: %s\n' "$release_setting" >&2
+                  exit 1
+              end
+          end
+          string match -q 'Developer ID Application:*' -- "$APPLE_SIGNING_IDENTITY"; or exit 1
+      - name: Build, sign and notarize
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+        env: *apple_credentials
+        with:
+          projectPath: apps/desktop
+          args: --target ${{ matrix.target }} --bundles app --ci
+      - name: Verify the distributed app and package it after stapling
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+          RELEASE_ARCH: ${{ matrix.arch }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          set -l release_app "target/$RELEASE_TARGET/release/bundle/macos/ApiArk Internal.app"
+          set -l bundled_version (/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$release_app/Contents/Info.plist")
+          test "$bundled_version" = "$RELEASE_VERSION"; or exit 1
+          set -l expected_arch (string replace x64 x86_64 -- "$RELEASE_ARCH")
+          test (lipo -archs "$release_app/Contents/MacOS/apiark") = "$expected_arch"; or exit 1
+          codesign --verify --deep --strict --verbose=2 "$release_app"; or exit 1
+          set -l release_signature (codesign -dv --verbose=4 "$release_app" 2>&1)
+          string match -rq '^Authority=Developer ID Application:' -- $release_signature; or exit 1
+          contains -- "TeamIdentifier=$APPLE_TEAM_ID" $release_signature; or exit 1
+          string match -rq 'flags=.*runtime' -- $release_signature; or exit 1
+          xcrun stapler validate "$release_app"; or exit 1
+          spctl --assess --type execute --verbose=2 "$release_app"; or exit 1
+          test -f "$release_app/Contents/Resources/LICENSE"; or exit 1
+          cmp LICENSE "$release_app/Contents/Resources/LICENSE"; or exit 1
+          mkdir -p release-artifacts; or exit 1
+          ditto -c -k --keepParent "$release_app" "release-artifacts/ApiArk-Internal-$RELEASE_VERSION-macos-$RELEASE_ARCH.app.zip"; or exit 1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: signed-macos-${{ matrix.arch }}
+          path: release-artifacts/*.app.zip
+          if-no-files-found: error
+
+  draft:
+    if: inputs.create_draft && needs.build.result == 'success'
+    needs: build
+    runs-on: macos-15
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: fish --no-config {0}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install Fish
+        shell: sh
+        run: brew install fish
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: signed-macos-*
+          merge-multiple: true
+          path: release-artifacts
+      - name: Create a draft; public publication is a separate action
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -l release_tag "v$RELEASE_VERSION"
+          set -l tagged_commit (gh api "repos/$GITHUB_REPOSITORY/commits/$release_tag" --jq .sha 2>/dev/null)
+          if test -n "$tagged_commit"; and test "$tagged_commit" != "$GITHUB_SHA"
+              printf 'Tag %s points to another commit; bump the fork version before releasing.\n' "$release_tag" >&2
+              exit 1
+          end
+          set -l release_files release-artifacts/*.app.zip
+          test (count $release_files) -eq 2; or exit 1
+          gh release create "$release_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease --title "ApiArk Internal $RELEASE_VERSION" --notes 'macOS preview. Build and compatibility details are in README.md. Automatic updates are disabled.' $release_files; or exit 1

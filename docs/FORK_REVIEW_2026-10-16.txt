@@ -1,0 +1,184 @@
+Kontrola forků ApiArku — 16. 10. 2026
+
+Rozsah a závěr
+===============
+Porovnání veřejných forků vychází z GitHub API a izolovaného Git checkoutu.
+Zkontrolováno bylo 82 forků, 111 větví (102 porovnatelných s původním main;
+9 větví gh-pages má nesouvisející historii). Vlastní změny mělo 15 forků.
+Větve main: 7 napřed, 1 rozdělená historie, 38 shodných, 36 pozadu.
+Samotný počet commitů neříká nic o bezpečnosti ani dokončenosti funkcí.
+
+Podrobně prověřené rozdíly proti původnímu main:
+46ba45acdc921bcf828c61190d8143e73525fd40
+
+hammerBobby/apiark, větev 0.4.8
+  48c686e7f0e92d2353e3a008ba3ef5a7c5446e0c — 11 commitů napřed
+  39 souborů, +1532/-143 řádků
+  https://github.com/hammerBobby/apiark/tree/48c686e7f0e92d2353e3a008ba3ef5a7c5446e0c
+DarkTama/apiark-dt, main
+  6c96fe4c0d43f8a72b591e1dc31aa2c8394996f8 — 4 commity napřed
+  42 souborů, +2852/-349 řádků
+  https://github.com/DarkTama/apiark-dt/tree/6c96fe4c0d43f8a72b591e1dc31aa2c8394996f8
+sir-geronimo/apiark, main
+  4119910412661dd939771ee812cce13b20b570d7 — 4 commity napřed
+  25 souborů, +1749/-124 řádků
+  https://github.com/sir-geronimo/apiark/tree/4119910412661dd939771ee812cce13b20b570d7
+
+Doporučení: žádný z těchto forků nepřebírat jako celek. Samostatně stojí za
+úvahu názvy běžných hlaviček a ergonomie výběru prostředí. Jejich konkrétní
+implementace vyžadují úpravy. Content-Type jsme opravili ve vlastním společném
+jádru. Nativní menu je případně lepší doplnit malou vlastní implementací.
+
+hammerBobby
+============
++ Řeší duplicitní Content-Type při doplňování výchozího typu těla.
+  Stejná chyba byla potvrzena v našem jádru a opravena samostatně.
++ Nabízí statické názvy běžných HTTP hlaviček; nezobrazuje jejich hodnoty.
+  Případné převzetí přizpůsobit našemu VariableInput, klávesnici a focusu.
+
+- Import cURL do aktivního requestu v lib/apply-parsed-curl.ts nemaže
+  předchozí hlavičky, autentizaci a tělo, pokud je nový příkaz neobsahuje.
+  Syntetický test potvrdil zachování starých credentials a těla.
+- Po asynchronním parsování cURL se mění právě aktivní záložka. Přepnutí
+  záložky během parsování upraví jiný request. Před parsováním se navíc
+  maže původní URL; chyba parseru ji neobnoví.
+- Export HEAD v lib/code-generators.ts vynechá metodu: skutečný cURL pošle
+  GET. URLencoded export nejprve escapuje hodnotu a pak použije
+  --data-urlencode: John Doe skončí jako John%2520Doe.
+- Apostrofy v URL/hlavičkách/basic auth nejsou správně escapované pro shell.
+  Reprodukce používala pouze neškodný apostrof, žádný spouštěný payload.
+- Uložení requestu ukládá i celou odpověď do YAML (tělo, hlavičky, cookies).
+  To je nevhodné pro kolekce sdílené přes Git.
+- Multipart model není sjednocený s CLI (formData proti form_data), CLI
+  runner navíc novou reprezentaci nepokrývá.
+- Formátování přes JSON.parse/stringify může změnit velká celočíselná ID.
+- Nové nápovědy mají nedostatky kolem Shift+Tab, blur a globálního focusu.
+
+Ve změněných testech cURL parseru byly nalezeny údaje připomínající skutečné
+credentials. Nebyly přeneseny do našeho repozitáře ani použity pro testy.
+Další zpracování dotčeného souboru bylo zastaveno a naše dočasné textové
+kopie odstraněny. Tento report jejich hodnoty ani soukromé adresy neuvádí.
+Celý parser proto nebyl runtime ověřen. Staticky byly dále patrné problémy
+s --form-string/@ a odvozováním metody multipart requestu.
+
+DarkTama
+========
++ Užitečný směr: poslední prostředí pro kolekci a kompaktní výběr u Send.
++ Filtry SQLite historie používají parametry a správně závorkované OR.
+  Import Insomnia v5 je mimo zamýšlený rozsah našeho forku.
+
+- Starší load prostředí může přepsat nověji vybranou kolekci.
+- Dokončení pending load po clear znovu naplní již zavřenou kolekci.
+- Runtime override proměnné přežije přepnutí prostředí; například starý
+  runtime token pak překryje hodnotu z nového prostředí.
+- Volba No environment se nepamatuje, protože null se bere jako absence.
+  Paměť poslední volby navíc není persistentní přes restart.
+- Přejmenování prostředí na existující název přepíše cíl a smaže původní
+  soubor. Syntetický filesystem test potvrdil ztrátu původního cíle.
+- storage/environment.rs nadále skládá cestu z neověřeného názvu. Název
+  s ../ zapíše mimo kolekci; potvrzeno výhradně v dočasné testovací složce.
+  Jde o zachovanou upstream slabinu, ne nově zavedenou traversal chybu.
+  Náš společný core stejný vstup odmítá.
+- Case-insensitive deduplikace názvů souborové kolize neřeší a může je skrýt.
+- Historie má další nechráněné asynchronní odpovědi; runtime ověření celého
+  UI historie nebylo provedeno.
+
+CI na prověřeném headu: CLI joby úspěšné, desktop release buildy neúspěšné,
+publish-release přesto úspěšný. Existence releasu tedy nedokládá úspěšný
+desktop build tohoto headu. Metadata ukazují pád kroku Build Tauri app;
+přesná příčina pádu nebyla zjištěna.
+
+sir-geronimo
+============
++ Začátek nativního menu a ikony; hotové zapojení akcí ale chybí.
+
+- Patnáct vlastních menu callbacků je prázdných, včetně New, Save,
+  Preferences a Toggle Sidebar. Zkratky mohou zabrat funkční Cmd+S/Cmd+N
+  bez provedení příslušné akce. About uvádí nesouvisející verzi 0.29.0.
+- main.tsx čeká na setupAppMenu před vytvořením React rootu bez ošetření
+  chyby. Selhání menu zablokuje start UI; browser dev nemá Tauri API.
+- Nový top-level await není kompatibilní s výchozími build targety Vite 6
+  v nezměněné konfiguraci tohoto forku. Ověřeno skutečnou transformací
+  jeho main.tsx přes esbuild s targety získanými z Vite.
+- Skutečný frontend CI padá již na konfliktu verzí pnpm. Nelze proto
+  tvrdit, že jeho zveřejněný CI běh spadl právě na top-level await.
+- Rust check/test joby úspěšné, nightly buildy neúspěšné. Menu testy nejsou.
+- Nové os/opener pluginy a asset permissions rozšiřují závislosti i pro
+  nevyužité části menu. Pro malý macOS fork nejsou jako celek potřeba.
+
+Společné rozdíly proti našemu forku
+==================================
+Všechny tři ponechávají upstream identitu dev.apiark.app, původní globální
+data a updater endpoint/klíč. Neřeší naše společné jádro ani hlavní dříve
+opravené hranice cookies, skriptů, OAuth a záloh. Licence MIT zůstává.
+Naše izolovaná identita, vlastní core a bezpečnostní opravy mají přednost
+před případným jednotlivým převzetím UI nápadu.
+
+Veřejné macOS releasy a podpisy
+==============================
+API kontrola release metadat: všech 82 forků a originál, bez API chyb.
+Release mělo pouze pět forků: hammerBobby, DarkTama, cemhun, HermannMeyerKG,
+Pratyay360. hammerBobby publikuje pouze Windows EXE; sir-geronimo nic.
+
+Staženy a bez spuštění prohlédnuty nejnovější veřejné arm64 .app.tar.gz:
+
+Repozitář                 Release tag    Verze uvnitř .app  Developer ID
+berbicanes/apiark          v0.4.6         0.4.6              NE
+DarkTama/apiark-dt         v0.4.7         0.4.7              NE
+cemhun/apiark             v1.0.16        1.0.16             NE
+HermannMeyerKG/apiark      hmr-0.4.9      0.4.6              NE
+Pratyay360/apiark          v0.4.7         0.4.6              NE
+
+Ve všech pěti případech: Signature=adhoc, TeamIdentifier=not set,
+Sealed Resources=none, Info.plist=not bound. codesign --verify --deep
+--strict selže kvůli chybějícím sealed resources. stapler nenajde přiložený
+ticket. Toto není Developer ID distribuční podpis. Samotné selhání podpisu
+nedokládá škodlivost aplikace. Neověřovali jsme Intel, všechny historické
+releasy ani obsah DMG; závěr se vztahuje na uvedené arm64 archivy.
+Tauri updater .sig je jiný mechanismus než macOS podpis a notarizace.
+
+Odkazy na zkontrolované releasy:
+https://github.com/berbicanes/apiark/releases/tag/v0.4.6
+https://github.com/DarkTama/apiark-dt/releases/tag/v0.4.7
+https://github.com/cemhun/apiark/releases/tag/v1.0.16
+https://github.com/HermannMeyerKG/apiark/releases/tag/hmr-0.4.9
+https://github.com/Pratyay360/apiark/releases/tag/v0.4.7
+https://github.com/hammerBobby/apiark/releases
+https://github.com/sir-geronimo/apiark/releases
+
+Reprodukce a limity
+===================
+Deset reprodukcí přes skutečné TS moduly v Node VM s mockovaným IPC/store,
+izolovaným prostředím a syntetickými daty: pět chyb hammerBobby, čtyři
+DarkTama a prázdné menu sir-geronimo. Navíc skutečný cURL proti localhostu
+potvrdil HEAD->GET a dvojité URL encoding. Rust test nad skutečným modulem
+DarkTama potvrdil kolizi při rename a traversal v dočasném fixture.
+Transformace sir-geronimo main.tsx potvrdila problém build targetu.
+
+Nejde o kompletní build a ruční test každého cizího forku ani o plný
+bezpečnostní audit. Pokus spustit Node proof pod macOS sandbox-exec skončil
+před startem; reprodukce následně běžely v běžném Codex sandboxu, s mocky
+a bez credentials. Žádná stažená cizí aplikace nebyla spuštěna.
+
+Detailní release log DarkTama automatická kontrola přístupu odmítla kvůli
+možnému obsahu privátních klíčů/credentials. Zákaz nebyl obcházen. Pro CI
+byla použita metadata kroků, pro podpis přímo zveřejněné binární artefakty.
+
+Naše navazující změny
+====================
+f119837 — společné jádro doplní Content-Type pro JSON/XML/raw/binary pouze
+pokud hlavička chybí. Respektuje case-insensitive explicitní i auth hlavičku
+a ignoruje disabled položky. Regrese přes lokální HTTP server: 20 requestů,
+kontrola přesně jedné Content-Type hlavičky a nezměněného těla.
+
+Kompletní scripts/check.fish: 113 core + 2 CLI + 1 desktop OAuth + 45 frontend
+= 161 úspěšných testů, žádné přeskočené; format, clippy, lint, TypeScript,
+frontend build a desktop check úspěšné (stávající clippy upozornění zůstávají).
+Nový lokální macOS arm64 .app build úspěšný, přibližně 22 MiB. MIT licence
+je přibalená uvnitř aplikace. Distribuční podpis ani notarizace neproběhly.
+
+Ručně spouštěný GitHub workflow pro arm64/Intel je připravený, včetně
+kontrol Developer ID, Team ID, hardened runtime, ticketu, verze a architektury.
+Má volitelný draft prerelease až po úspěchu obou buildů. Hostovaný běh,
+nastavení Secrets, export klíče, přesun repozitáře ani publikace neproběhly.
+Viz BUILD_AND_RELEASE.md. Origin zůstává na Forgejo.

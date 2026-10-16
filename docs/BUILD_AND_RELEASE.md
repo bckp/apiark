@@ -1,11 +1,11 @@
-# Build a interní vydání
+# Build a vydání pro macOS
 
 Tento fork udržujeme pro macOS, včetně desktopu i CLI. CLI a `apiark-core`
 nemají závislost na Tauri. Níže jsou postupy pro lokální build a vydání na Macu.
 
 ## Lokální build
 
-Potřebuješ Rust stable s C toolchainem, Node 22+ a pnpm 11.25.0.
+Potřebuješ Rust stable s C toolchainem, Node 22/24 a pnpm 11.25.0.
 Na Macu jsou potřeba Xcode Command Line Tools. Příkazy jsou ve Fish syntaxi.
 
 ```fish
@@ -115,22 +115,23 @@ Pro macOS jsou v `.github/workflows/ci.yml` připravené testy a release build
 CLI a test/build desktopu. Artefakty jsou tar archivy, aby se zachovala
 práva spustitelných souborů; obsahují také původní `LICENSE` s copyrightem.
 Při ruční distribuci aplikace nebo CLI přibal stejný licenční soubor.
-CI nic nepublikuje a nemá distribuční tajné údaje.
+Běžná CI nic nepublikuje a nemá distribuční tajné údaje.
 Původní release, nightly, benchmark a package-manager workflow jsou odstraněné.
+Nový ručně spouštěný workflow je popsaný níže.
 
-Definice je pro GitHub Actions. Na `code.kepakovi.cz` je dostupný Git remote,
-ale veřejné zjištění typu serveru/CI vrátilo HTTP 403. Hostované CI nebylo
-spuštěno. Pro jiný Actions server je nutné přizpůsobit umístění workflow,
-runner labels a artifact action; podporu serveru zde nepředpokládáme.
+Definice jsou pro GitHub Actions. Origin zatím zůstává na Forgejo
+`code.kepakovi.cz`; přesun repozitáře ani hostovaný běh nového workflow
+neproběhl. Podporu Actions na Forgejo zde nepředpokládáme.
 
 ## Podpis a notarizace
 
-Lokální kontrola `security find-identity -v -p codesigning` našla **0 platných
-identit**. Distribuční podpis ani notarizace neproběhly. Bundle sestavený
+Nová lokální kontrola 16. 10. 2026 našla platnou **Developer ID Application**
+identitu a `notarytool` je dostupný. Přístup k notarizační službě dosud
+ověřený není. Distribuční podpis ani notarizace tohoto forku neproběhly. Bundle sestavený
 s `--no-sign` má pouze ad-hoc podpis samotného Mach-O od linkeru, bez Team ID
 a bez podepsaných resources. To není Developer ID podpis aplikace.
 
-Po instalaci vlastní identity do Keychainu:
+S vlastní identitou v Keychainu:
 
 ```fish
 security find-identity -v -p codesigning
@@ -162,3 +163,59 @@ Před případným návratem updateru je třeba vlastní endpoint, vlastní upda
 klíč a ověření aktualizace na testovací instalaci.
 
 Postup vychází z [oficiální dokumentace Tauri](https://v2.tauri.app/distribute/sign/macos/).
+
+## Podepsaný build na GitHubu
+
+`.github/workflows/macos-release.yml` obsahuje ručně spouštěný workflow
+**Signed macOS preview**. Přijímá pouze výchozí větev repozitáře, nepouští
+podpis při pull requestu a běží na nativních runnerech pro Apple Silicon
+(`macos-15`) a Intel (`macos-15-intel`). Běžné CLI buildy dál zajišťuje CI;
+tento release workflow distribuuje desktopovou aplikaci.
+
+V GitHub Settings vytvoř environment `macos-release`, ideálně s požadovaným
+schválením vydání. Do něj nastav tyto **Secrets**:
+
+| Secret | Obsah |
+|---|---|
+| `APPLE_CERTIFICATE` | Base64 exportu vlastní Developer ID Application identity včetně privátního klíče do heslem chráněného `.p12` |
+| `APPLE_CERTIFICATE_PASSWORD` | Heslo tohoto exportu |
+| `APPLE_ID` | Účet pro notarizaci |
+| `APPLE_PASSWORD` | App-specific password pro notarizaci; nepoužívej běžné heslo účtu |
+
+A tyto environment **Variables**:
+
+| Variable | Obsah |
+|---|---|
+| `APPLE_SIGNING_IDENTITY` | Přesný název vlastní `Developer ID Application: …` identity |
+| `APPLE_TEAM_ID` | Team ID odpovídající distribučnímu certifikátu a notarizačnímu účtu |
+
+Base64 pouze převádí export do textu, není to šifrování. Export klíče,
+uložení Secrets a první notarizační přihlášení nebyly v této práci provedené.
+Tauri Action importuje certifikát na dočasném GitHub runneru; konfigurace
+nevyžaduje přístup k lokálnímu Macu během buildu.
+
+Workflow nejprve provede `scripts/check.fish`. Potom oficiální Tauri Action
+sestaví a podepíše `.app` a předá ji notarizaci. Navazující kontrola vyžaduje
+platné sealed resources, Developer ID Application autoritu, očekávané Team ID,
+hardened runtime, přiložený notarizační ticket a úspěšný Gatekeeper assessment.
+Ověřuje také skutečnou verzi a architekturu aplikace oproti názvu artefaktu.
+Nepodepsaná nebo pouze ad-hoc podepsaná aplikace nemůže projít jako vydání.
+MIT licence je přibalená přímo do `Contents/Resources/LICENSE` před podpisem.
+
+Výstupem jsou dva ZIP artefakty s podepsanou a staplovanou aplikací,
+pro `arm64` a `x64`. Updater zůstává vypnutý, updater klíč není potřeba.
+Při ponechání `create_draft = false` vzniknou pouze artefakty běhu.
+Volba `true` po úspěchu obou architektur vytvoří **draft prerelease**;
+veřejné publikování draftu je samostatný ruční krok.
+
+Tag se odvozuje z `tauri.conf.json` jako `vVERSION`. Před prvním veřejným
+vydáním zvol verzi forku a aktualizuj také `apps/desktop/src-tauri/Cargo.toml`
+a workspace `Cargo.lock`. Původní `v0.4.6` může již ukazovat na upstream;
+workflow odmítne založit release, pokud tag ukazuje na jiný commit.
+Existující release se nepřepisuje.
+
+Příprava workflow byla ověřená lokálním parsováním YAML a kontrolou Fish
+syntaxe. Podpis, notarizace, oba GitHub runnery a draft release musí ještě
+projít prvním skutečným hostovaným během po nastavení Secrets.
+
+Použité runner labels odpovídají [dokumentaci GitHubu](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).

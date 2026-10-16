@@ -34,6 +34,9 @@
   "plugins": {},
   "bundle": {
     "active": true,
+    "resources": {
+      "../../../LICENSE": "LICENSE"
+    },
     "createUpdaterArtifacts": false,
     "targets": [
       "app",

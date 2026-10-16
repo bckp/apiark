@@ -59,6 +59,8 @@ open 'target/release/bundle/macos/ApiArk Internal.app'
 Build byl ověřený na Macu s Apple Silicon. Podpis vlastní Developer ID
 identitou, notarizace a další macOS build varianty jsou popsané v
 [návodu pro build a vydání](docs/BUILD_AND_RELEASE.md).
+Připravený je také [ručně spouštěný podepsaný build na GitHub Actions](docs/BUILD_AND_RELEASE.md#podepsaný-build-na-githubu)
+pro Apple Silicon a Intel, s volitelným draftem releasu.
 
 Pro vývoj s automatickým načítáním změn:
 

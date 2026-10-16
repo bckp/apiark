@@ -1,6 +1,6 @@
 # Předání interního forku
 
-Stav ověření: 16. 10. 2026, macOS arm64. Aktuální větev `codex/safe-variable-completion`,
+Stav ověření: 16. 10. 2026, macOS arm64. Aktuální větev `codex/content-type-header`,
 výchozí commit `46ba45acdc921bcf828c61190d8143e73525fd40`.
 Origin je `https://code.kepakovi.cz/bckp/apiark.git`; původní GitHub zůstává
 jako `upstream`. Ověření Git remote uspělo. **Push ani publikace neproběhly.**
@@ -11,6 +11,14 @@ ErrorBoundary panelů a našeptávání názvů proměnných bez hodnot v URL,
 parametrech, hlavičkách a Monaco editoru. Rozsah, ovládání a známá omezení
 jsou v [VARIABLE_COMPLETION.md](VARIABLE_COMPLETION.md). Workspaces,
 persistentní globals, nový DnD ani upgrade závislostí se nepřebíraly.
+
+Následná kontrola dalších forků potvrdila dvojitý Content-Type i v našem
+jádru. Oprava doplňuje výchozí typ JSON/XML/raw/binary pouze při chybějící
+hlavičce a je ověřená 20 požadavky přes skutečný lokální HTTP server.
+Přibalení MIT licence a workflow pro podepsaný/notarizovaný macOS preview
+jsou připravené; veřejné vydání ani přesun na GitHub neproběhly.
+Podrobné výsledky porovnání tří forků, reprodukcí a kontroly podpisů jsou
+v [reportu z 16. 10. 2026](FORK_REVIEW_2026-10-16.txt).
 
 ## Implementace
 
@@ -78,7 +86,7 @@ Finální `scripts/check.fish` skončil exit 0:
 | Kontrola | Výsledek na tomto Macu |
 |---|---|
 | Rust fmt | PASS |
-| apiark-core | 112 testů PASS: 64 unit, 32 převzatých regresí, 4 Postman, 12 runtime |
+| apiark-core | 113 testů PASS: 64 unit, 32 převzatých regresí, 4 Postman, 13 runtime |
 | CLI subprocess integrace | 2 testy PASS, včetně exit codes, pm/Promise chyb a výběru složky |
 | Desktop OAuth | 1 test PASS |
 | Frontend | 45 testů v 8 souborech PASS, žádné přeskočené testy |
@@ -126,14 +134,14 @@ rychlosti skutečného startu GUI se neprovedlo.
    JPEG v JSON, přepnutí/zavření záložky za běhu, chybový a nový běh,
    uložení binárních dat a lokální přetrvání po restartu. Automatické testy
    těchto stavů nenahrazují skutečný WebKit/native dialog test.
-3. Nainstalovat vlastní Developer ID identitu a provést podpis/notarizaci
-   podle [BUILD_AND_RELEASE.md](BUILD_AND_RELEASE.md). Lokálně bylo nalezeno
-   **0 platných podpisových identit**. Ad-hoc podpis linkeru není distribuční
-   podpis; notarizace a DMG nebyly ověřeny.
+3. Provést podpis/notarizaci podle [BUILD_AND_RELEASE.md](BUILD_AND_RELEASE.md).
+   Platná Developer ID identita je nyní dostupná; notarizační přístup ještě
+   ověřený není. Nový GitHub workflow vyžaduje vlastní Secrets a jeho první
+   skutečný běh teprve musí proběhnout. Lokální build zůstává bez distribučního podpisu.
 4. Spustit připravenou CI matici na skutečných macOS/Linux/Windows runnerech.
    Lokálně je ověřený jen macOS arm64. Windows/Linux, Intel/universal Mac
-   a hostovaná CI zde neběžely. Typ CI serveru na originu nešlo přes veřejné
-   API určit (403); GitHub Actions definici je případně třeba přizpůsobit.
+   a hostovaná CI zde neběžely. Definice jsou určené pro GitHub Actions;
+   origin na Forgejo se v této práci neměnil.
 
 Postman runtime není implementovaný; podporovaná podmnožina a odmítnuté
 konstrukce jsou v [POSTMAN.md](POSTMAN.md). Mapový editor neumí editovat
