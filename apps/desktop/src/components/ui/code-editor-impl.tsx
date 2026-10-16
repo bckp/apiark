@@ -2,6 +2,7 @@ import { useRef, useCallback, useState } from "react";
 import Editor, { type OnMount, loader } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import { useResolvedTheme } from "@/hooks/use-theme";
+import { registerVariableCompletions } from "@/lib/monaco-variable-completion";
 
 // Configure Monaco to use the local monaco-editor package instead of fetching from CDN.
 // The vite-plugin-monaco-editor handles bundling workers automatically.
@@ -101,9 +102,24 @@ function registerGraphQL(monaco: typeof Monaco) {
   monaco.languages.register({ id: "graphql" });
   monaco.languages.setMonarchTokensProvider("graphql", {
     keywords: [
-      "query", "mutation", "subscription", "fragment", "on", "type", "input",
-      "enum", "scalar", "interface", "union", "extend", "schema", "directive",
-      "implements", "true", "false", "null",
+      "query",
+      "mutation",
+      "subscription",
+      "fragment",
+      "on",
+      "type",
+      "input",
+      "enum",
+      "scalar",
+      "interface",
+      "union",
+      "extend",
+      "schema",
+      "directive",
+      "implements",
+      "true",
+      "false",
+      "null",
     ],
     typeKeywords: ["Int", "Float", "String", "Boolean", "ID"],
     operators: ["=", "!", "...", ":", "@", "|", "&"],
@@ -116,21 +132,27 @@ function registerGraphQL(monaco: typeof Monaco) {
         [/"/, { token: "string.quote", bracket: "@open", next: "@string" }],
         [/\d+/, "number"],
         [/\$\w+/, "variable"],
-        [/[a-zA-Z_]\w*/, {
-          cases: {
-            "@keywords": "keyword",
-            "@typeKeywords": "type",
-            "@default": "identifier",
+        [
+          /[a-zA-Z_]\w*/,
+          {
+            cases: {
+              "@keywords": "keyword",
+              "@typeKeywords": "type",
+              "@default": "identifier",
+            },
           },
-        }],
+        ],
         // eslint-disable-next-line no-useless-escape
         [/[{}()\[\]]/, "@brackets"],
-        [/@symbols/, {
-          cases: {
-            "@operators": "operator",
-            "@default": "",
+        [
+          /@symbols/,
+          {
+            cases: {
+              "@operators": "operator",
+              "@default": "",
+            },
           },
-        }],
+        ],
         { include: "@whitespace" },
       ],
       string: [
@@ -138,9 +160,7 @@ function registerGraphQL(monaco: typeof Monaco) {
         [/@escapes/, "string.escape"],
         [/"/, { token: "string.quote", bracket: "@close", next: "@pop" }],
       ],
-      whitespace: [
-        [/[ \t\r\n]+/, "white"],
-      ],
+      whitespace: [[/[ \t\r\n]+/, "white"]],
     },
   });
 }
@@ -150,9 +170,12 @@ registerGraphQL(monacoEditor);
 
 function getMonacoTheme(resolved: "light" | "dark" | "black"): string {
   switch (resolved) {
-    case "light": return "apiark-light";
-    case "black": return "apiark-black";
-    default: return "apiark-dark";
+    case "light":
+      return "apiark-light";
+    case "black":
+      return "apiark-black";
+    default:
+      return "apiark-dark";
   }
 }
 
@@ -184,17 +207,21 @@ export function CodeEditorImpl({
 
   const [contentLeft, setContentLeft] = useState(56);
 
-  const handleMount: OnMount = useCallback((editor, monaco) => {
-    editorRef.current = editor;
-    monacoRef.current = monaco;
-    registerGraphQL(monaco);
-    registerThemes(monaco);
-    monaco.editor.setTheme(monacoTheme);
-    setContentLeft(editor.getLayoutInfo().contentLeft);
-    editor.onDidLayoutChange((layout) => {
-      setContentLeft(layout.contentLeft);
-    });
-  }, [monacoTheme]);
+  const handleMount: OnMount = useCallback(
+    (editor, monaco) => {
+      editorRef.current = editor;
+      monacoRef.current = monaco;
+      registerGraphQL(monaco);
+      registerThemes(monaco);
+      registerVariableCompletions(monaco);
+      monaco.editor.setTheme(monacoTheme);
+      setContentLeft(editor.getLayoutInfo().contentLeft);
+      editor.onDidLayoutChange((layout) => {
+        setContentLeft(layout.contentLeft);
+      });
+    },
+    [monacoTheme],
+  );
 
   // Switch theme when app theme changes
   if (monacoRef.current && themesRegistered) {
@@ -206,7 +233,10 @@ export function CodeEditorImpl({
   return (
     <div className="relative h-full overflow-hidden rounded border border-[var(--color-border)]">
       {showPlaceholder && (
-        <div className="pointer-events-none absolute top-2 z-10 text-sm text-[var(--color-text-dimmed)]" style={{ left: contentLeft }}>
+        <div
+          className="pointer-events-none absolute top-2 z-10 text-sm text-[var(--color-text-dimmed)]"
+          style={{ left: contentLeft }}
+        >
           {placeholder}
         </div>
       )}
@@ -228,7 +258,8 @@ export function CodeEditorImpl({
           readOnly,
           scrollBeyondLastLine: false,
           fontSize: 13,
-          fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
+          fontFamily:
+            "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
           tabSize: 2,
           wordWrap: "on",
           automaticLayout: true,
@@ -241,7 +272,8 @@ export function CodeEditorImpl({
           folding: true,
           bracketPairColorization: { enabled: true },
           suggest: { showWords: false },
-          quickSuggestions: language === "javascript" || language === "typescript",
+          wordBasedSuggestions: "off",
+          quickSuggestions: { other: true, comments: false, strings: true },
           overviewRulerLanes: 0,
           hideCursorInOverviewRuler: true,
           overviewRulerBorder: false,

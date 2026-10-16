@@ -31,6 +31,7 @@ import { useConsoleStore } from "@/stores/console-store";
 import { useTheme } from "@/hooks/use-theme";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useFileWatcher } from "@/hooks/use-file-watcher";
+import { useVariableCompletion } from "@/hooks/use-variable-completion";
 import {
   PanelLeft,
   Plus,
@@ -79,6 +80,12 @@ export default function App() {
   const collections = useCollectionStore((s) => s.collections);
   const environmentCollection =
     active?.collectionPath ?? collections[0]?.path ?? null;
+  useVariableCompletion(
+    activeId,
+    environmentCollection,
+    active?.filePath ?? null,
+    Boolean(active?.collectionPath),
+  );
   useEffect(() => {
     if (environmentCollection)
       void useEnvironmentStore

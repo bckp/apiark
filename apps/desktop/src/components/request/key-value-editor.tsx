@@ -1,5 +1,6 @@
 import type { KeyValuePair } from "@apiark/types";
 import { Plus, Trash2 } from "lucide-react";
+import { VariableInput } from "@/components/ui/variable-input";
 
 let kvCounter = 0;
 const kvId = () => `kv_${Date.now()}_${++kvCounter}`;
@@ -17,7 +18,11 @@ export function KeyValueEditor({
   keyPlaceholder = "Key",
   valuePlaceholder = "Value",
 }: KeyValueEditorProps) {
-  const update = (index: number, field: keyof KeyValuePair, value: string | boolean) => {
+  const update = (
+    index: number,
+    field: keyof KeyValuePair,
+    value: string | boolean,
+  ) => {
     const updated = pairs.map((p, i) =>
       i === index ? { ...p, [field]: value } : p,
     );
@@ -65,12 +70,12 @@ export function KeyValueEditor({
             placeholder={keyPlaceholder}
             className="rounded bg-[var(--color-elevated)] px-2 py-1 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
           />
-          <input
+          <VariableInput
             type="text"
             value={pair.value}
-            onChange={(e) => update(index, "value", e.target.value)}
+            onValueChange={(value) => update(index, "value", value)}
             placeholder={valuePlaceholder}
-            className="rounded bg-[var(--color-elevated)] px-2 py-1 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
+            className="min-w-0 rounded bg-[var(--color-elevated)] px-2 py-1 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
           />
           <button
             onClick={() => removeRow(index)}

@@ -1,12 +1,26 @@
-import { forwardRef, useState, useEffect, useMemo, useRef, useCallback } from "react";
+import {
+  forwardRef,
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { useEnvironmentStore } from "@/stores/environment-store";
 import type { HttpMethod, EnvironmentData } from "@apiark/types";
-import { Loader2, Send, AlertCircle, Check, ChevronsUpDown } from "lucide-react";
+import {
+  Loader2,
+  Send,
+  AlertCircle,
+  Check,
+  ChevronsUpDown,
+} from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { HintTooltip } from "@/components/ui/hint-tooltip";
 import { saveEnvironment } from "@/lib/tauri-api";
+import { VariableInput } from "@/components/ui/variable-input";
 
 const METHODS: HttpMethod[] = [
   "GET",
@@ -58,7 +72,9 @@ function extractVariableRefs(tab: {
 }
 
 /** Split a URL string into segments of plain text and {{variable}} references */
-function splitUrlSegments(url: string): { type: "text" | "var"; value: string }[] {
+function splitUrlSegments(
+  url: string,
+): { type: "text" | "var"; value: string }[] {
   const segments: { type: "text" | "var"; value: string }[] = [];
   const regex = /\{\{([\w$]+)\}\}/g;
   let lastIndex = 0;
@@ -138,7 +154,7 @@ function VariableEditor({
           title={
             isUnresolved
               ? `Click to set value for ${varName}`
-              : `${varName} = ${resolved} — click to edit`
+              : `${varName} — click to edit`
           }
         >
           {`{{${varName}}}`}
@@ -195,7 +211,8 @@ function VariableEditor({
           )}
           {activeEnvName && (
             <p className="mt-2 text-[10px] text-[var(--color-text-dimmed)]">
-              Saves to <span className="font-mono">{activeEnvName}</span> environment. Press Enter to save.
+              Saves to <span className="font-mono">{activeEnvName}</span>{" "}
+              environment. Press Enter to save.
             </p>
           )}
           <Popover.Arrow className="fill-[var(--color-border)]" />
@@ -228,18 +245,29 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
   // Merge forwarded ref with local ref
   const setRefs = useCallback(
     (el: HTMLInputElement | null) => {
-      (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+      (inputRef as React.MutableRefObject<HTMLInputElement | null>).current =
+        el;
       if (typeof ref === "function") ref(el);
-      else if (ref) (ref as React.MutableRefObject<HTMLInputElement | null>).current = el;
+      else if (ref)
+        (ref as React.MutableRefObject<HTMLInputElement | null>).current = el;
     },
     [ref],
   );
 
-  const url=tab?.url??"";
-  const headers=tab?.headers;
-  const params=tab?.params;
-  const content=tab?.body.content??"";
-  const variableRefs = useMemo(() => extractVariableRefs({url,headers:headers??[],params:params??[],body:{content}}),[url,headers,params,content]);
+  const url = tab?.url ?? "";
+  const headers = tab?.headers;
+  const params = tab?.params;
+  const content = tab?.body.content ?? "";
+  const variableRefs = useMemo(
+    () =>
+      extractVariableRefs({
+        url,
+        headers: headers ?? [],
+        params: params ?? [],
+        body: { content },
+      }),
+    [url, headers, params, content],
+  );
 
   const activeEnvName = useEnvironmentStore((s) => s.activeEnvironmentName);
 
@@ -260,22 +288,30 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
   const urlSegments = useMemo(() => splitUrlSegments(url), [url]);
   const hasVariablesInUrl = urlSegments.some((s) => s.type === "var");
 
-  const handleSaveVariable = useCallback(async (varName: string, value: string) => {
-    const { activeCollectionPath, activeEnvironmentName, environments } = useEnvironmentStore.getState();
-    if (!activeCollectionPath || !activeEnvironmentName) return;
+  const handleSaveVariable = useCallback(
+    async (varName: string, value: string) => {
+      const { activeCollectionPath, activeEnvironmentName, environments } =
+        useEnvironmentStore.getState();
+      if (!activeCollectionPath || !activeEnvironmentName) return;
 
-    const env = environments.find((e) => e.name === activeEnvironmentName);
-    if (!env) return;
+      const env = environments.find((e) => e.name === activeEnvironmentName);
+      if (!env) return;
 
-    const updatedEnv: EnvironmentData = {
-      ...env,
-      variables: { ...env.variables, [varName]: value },
-    };
-    await saveEnvironment(activeCollectionPath, updatedEnv);
-    await useEnvironmentStore.getState().loadEnvironments(activeCollectionPath);
-    const resolved = await useEnvironmentStore.getState().getResolvedVariables();
-    setResolvedVars(resolved);
-  }, []);
+      const updatedEnv: EnvironmentData = {
+        ...env,
+        variables: { ...env.variables, [varName]: value },
+      };
+      await saveEnvironment(activeCollectionPath, updatedEnv);
+      await useEnvironmentStore
+        .getState()
+        .loadEnvironments(activeCollectionPath);
+      const resolved = await useEnvironmentStore
+        .getState()
+        .getResolvedVariables();
+      setResolvedVars(resolved);
+    },
+    [],
+  );
 
   const sendBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -284,29 +320,42 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
     if (!btn) return;
     const cls = success ? "animate-flash-green" : "animate-flash-red";
     btn.classList.add(cls);
-    const onEnd = () => { btn.classList.remove(cls); btn.removeEventListener("animationend", onEnd); };
+    const onEnd = () => {
+      btn.classList.remove(cls);
+      btn.removeEventListener("animationend", onEnd);
+    };
     btn.addEventListener("animationend", onEnd);
   }, []);
 
   // Watch for response/error changes to flash the send button
-  const response=tab?.response;const error=tab?.error;const loading=tab?.loading;
-  const failedTests=Boolean(tab?.testResults.some(t=>!t.passed)||tab?.assertionResults.some(t=>!t.passed));
+  const response = tab?.response;
+  const error = tab?.error;
+  const loading = tab?.loading;
+  const failedTests = Boolean(
+    tab?.testResults.some((t) => !t.passed) ||
+      tab?.assertionResults.some((t) => !t.passed),
+  );
   useEffect(() => {
     if (loading) return;
     if (response) flashSendButton(response.status < 400 && !failedTests);
     else if (error) flashSendButton(false);
-  }, [response,error,loading,failedTests,flashSendButton]);
+  }, [response, error, loading, failedTests, flashSendButton]);
 
   if (!tab) return null;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      e.stopPropagation();
       send();
     }
   };
 
   return (
-    <div data-tour="url-bar" className="flex items-center gap-3 bg-[var(--color-card)] px-4 py-3">
+    <div
+      data-tour="url-bar"
+      className="flex items-center gap-3 bg-[var(--color-card)] px-4 py-3"
+    >
       {/* HTTP method */}
       <div className="relative shrink-0">
         <select
@@ -316,21 +365,28 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
           className={`${METHOD_COLORS[tab.method]} ${METHOD_BG[tab.method]} h-10 appearance-none cursor-pointer rounded-lg border border-transparent pl-3 pr-9 text-sm font-bold outline-none transition-colors focus:ring-2 focus:ring-[var(--color-accent)]/50`}
         >
           {METHODS.map((m) => (
-            <option key={m} value={m} className="text-[var(--color-text-primary)] bg-[var(--color-elevated)]">
+            <option
+              key={m}
+              value={m}
+              className="text-[var(--color-text-primary)] bg-[var(--color-elevated)]"
+            >
               {m}
             </option>
           ))}
         </select>
-        <ChevronsUpDown aria-hidden="true" className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 ${METHOD_COLORS[tab.method]}`} />
+        <ChevronsUpDown
+          aria-hidden="true"
+          className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 ${METHOD_COLORS[tab.method]}`}
+        />
       </div>
 
       {/* URL input with variable highlighting overlay */}
       <div className="relative flex-1">
-        <input
+        <VariableInput
           ref={setRefs}
           type="text"
           value={tab.url}
-          onChange={(e) => setUrl(e.target.value)}
+          onValueChange={setUrl}
           onKeyDown={handleKeyDown}
           onFocus={() => setInputFocused(true)}
           onBlur={() => setInputFocused(false)}
@@ -390,7 +446,10 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
             )}
             {t("request.send")}
           </button>
-          <HintTooltip hintId="send-shortcut" message="Tip: Press Ctrl+Enter to send requests quickly" />
+          <HintTooltip
+            hintId="send-shortcut"
+            message="Tip: Press Ctrl+Enter to send requests quickly"
+          />
         </div>
       )}
     </div>

@@ -5,6 +5,17 @@ use regex::Regex;
 
 static INTERPOLATION_RE: OnceLock<Regex> = OnceLock::new();
 
+pub const DYNAMIC_VARIABLE_NAMES: &[&str] = &[
+    "$uuid",
+    "$timestamp",
+    "$timestampMs",
+    "$isoTimestamp",
+    "$randomInt",
+    "$randomFloat",
+    "$randomString",
+    "$randomEmail",
+];
+
 fn interpolation_regex() -> &'static Regex {
     INTERPOLATION_RE.get_or_init(|| Regex::new(r"\{\{([^}]+)\}\}").unwrap())
 }
@@ -90,6 +101,13 @@ pub fn interpolate_map(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn completion_names_are_supported_by_runtime() {
+        for name in DYNAMIC_VARIABLE_NAMES {
+            assert!(resolve_dynamic(name).is_some(), "{name}");
+        }
+    }
 
     #[test]
     fn test_basic_interpolation() {

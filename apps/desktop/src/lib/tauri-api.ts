@@ -31,7 +31,9 @@ let _invoke: typeof import("@tauri-apps/api/core").invoke | undefined;
 
 async function getInvoke() {
   if (!isTauri()) {
-    throw new Error("Not running in Tauri environment. Use `pnpm tauri dev` to run the app.");
+    throw new Error(
+      "Not running in Tauri environment. Use `pnpm tauri dev` to run the app.",
+    );
   }
   if (!_invoke) {
     const mod = await import("@tauri-apps/api/core");
@@ -40,7 +42,10 @@ async function getInvoke() {
   return _invoke;
 }
 
-async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+async function invoke<T>(
+  cmd: string,
+  args?: Record<string, unknown>,
+): Promise<T> {
   const fn = await getInvoke();
   return fn<T>(cmd, args);
 }
@@ -118,7 +123,6 @@ export async function sendRequestWithScripts(
   }
 }
 
-
 // ── Collections ──
 
 export async function openCollection(path: string): Promise<CollectionNode> {
@@ -183,9 +187,12 @@ export async function renameItem(
 export async function getCollectionDefaults(
   collectionPath: string,
 ): Promise<import("@apiark/types").CollectionDefaults> {
-  return await invoke<import("@apiark/types").CollectionDefaults>("get_collection_defaults", {
-    collectionPath,
-  });
+  return await invoke<import("@apiark/types").CollectionDefaults>(
+    "get_collection_defaults",
+    {
+      collectionPath,
+    },
+  );
 }
 
 export async function updateCollectionDefaults(
@@ -199,6 +206,22 @@ export async function updateCollectionDefaults(
 }
 
 // ── Environments ──
+
+export async function getVariableNames(
+  collectionPath: string | null,
+  sourcePath: string | null,
+  environmentName: string | null,
+  includeScopes: boolean,
+  removedNames: string[],
+): Promise<string[]> {
+  return invoke<string[]>("get_variable_names", {
+    collectionPath,
+    sourcePath,
+    environmentName,
+    includeScopes,
+    removedNames,
+  });
+}
 
 export async function loadEnvironments(
   collectionPath: string,
@@ -231,7 +254,11 @@ export async function saveEnvironment(
   env: EnvironmentData,
   scope?: "shared" | "personal",
 ): Promise<void> {
-  await invoke<void>("save_environment", { collectionPath, env, scope: scope ?? env.scope ?? null });
+  await invoke<void>("save_environment", {
+    collectionPath,
+    env,
+    scope: scope ?? env.scope ?? null,
+  });
 }
 
 // ── History ──
@@ -260,7 +287,9 @@ export async function savePersistedState(state: PersistedState): Promise<void> {
 
 // ── cURL ──
 
-export async function parseCurlCommand(input: string): Promise<ParsedCurlRequest> {
+export async function parseCurlCommand(
+  input: string,
+): Promise<ParsedCurlRequest> {
   return await invoke<ParsedCurlRequest>("parse_curl_command", { input });
 }
 
@@ -300,7 +329,9 @@ export async function oauthStartFlow(authConfig: AuthConfig): Promise<string> {
   }
 }
 
-export async function oauthGetTokenStatus(key: string): Promise<OAuthTokenStatus> {
+export async function oauthGetTokenStatus(
+  key: string,
+): Promise<OAuthTokenStatus> {
   return await invoke<OAuthTokenStatus>("oauth_get_token_status", { key });
 }
 
@@ -326,14 +357,21 @@ export async function importCollection(
   format: ImportFormat,
   targetDir: string,
 ): Promise<string> {
-  return await invoke<string>("import_collection", { filePath, format, targetDir });
+  return await invoke<string>("import_collection", {
+    filePath,
+    format,
+    targetDir,
+  });
 }
 
 export async function importEnvironment(
   filePath: string,
   collectionPath: string,
 ): Promise<string> {
-  return await invoke<string>("import_environment", { filePath, collectionPath });
+  return await invoke<string>("import_environment", {
+    filePath,
+    collectionPath,
+  });
 }
 
 export async function exportCollection(
@@ -345,11 +383,20 @@ export async function exportCollection(
 
 // ── Cookie Jar ──
 
-export async function getCookieJar(collectionPath: string): Promise<import("@apiark/types").CookieJarEntry[]> {
-  return await invoke<import("@apiark/types").CookieJarEntry[]>("get_cookie_jar", { collectionPath });
+export async function getCookieJar(
+  collectionPath: string,
+): Promise<import("@apiark/types").CookieJarEntry[]> {
+  return await invoke<import("@apiark/types").CookieJarEntry[]>(
+    "get_cookie_jar",
+    { collectionPath },
+  );
 }
 
-export async function deleteCookie(collectionPath: string, name: string, domain: string): Promise<void> {
+export async function deleteCookie(
+  collectionPath: string,
+  name: string,
+  domain: string,
+): Promise<void> {
   return await invoke<void>("delete_cookie", { collectionPath, name, domain });
 }
 
@@ -373,7 +420,10 @@ export async function exportAppState(
   outputPath: string,
   includeHistory: boolean,
 ): Promise<ExportSummary> {
-  return await invoke<ExportSummary>("export_app_state", { outputPath, includeHistory });
+  return await invoke<ExportSummary>("export_app_state", {
+    outputPath,
+    includeHistory,
+  });
 }
 
 export async function importAppState(zipPath: string): Promise<ImportSummary> {
@@ -394,7 +444,10 @@ export async function listTrash(): Promise<TrashItem[]> {
   return await invoke<TrashItem[]>("list_trash", {});
 }
 
-export async function restoreFromTrash(trashPath: string, restoreTo: string): Promise<void> {
+export async function restoreFromTrash(
+  trashPath: string,
+  restoreTo: string,
+): Promise<void> {
   return await invoke<void>("restore_from_trash", { trashPath, restoreTo });
 }
 
@@ -414,8 +467,10 @@ export async function unwatchCollection(collectionPath: string): Promise<void> {
 
 // ── Sample Collection ──
 
-
-export async function createCollection(parentDir: string, name: string): Promise<string> {
+export async function createCollection(
+  parentDir: string,
+  name: string,
+): Promise<string> {
   return await invoke<string>("create_collection", { parentDir, name });
 }
 

@@ -11,6 +11,8 @@ a stejné provádění HTTP požadavků, skriptů a testů.
 - Jediné Rust jádro `crates/apiark-core` pro kolekce, prostředí, interpolaci,
   HTTP, cookies, redirecty, skripty, testy a Postman převody.
 - HTTP/REST, kolekce a složky, prostředí, autentizace, odpovědi a kolekční běh.
+- Našeptávání `{{proměnných}}` v URL, hodnotách parametrů/hlaviček a editoru;
+  návrhy obsahují pouze názvy, nikdy hodnoty. [Ovládání a rozsah](docs/VARIABLE_COMPLETION.md).
 - Post-response vizualizace `image`, `text`, `json` přes `ark.visualize`.
 - Postman Collection v2.1 import/export s uchováním metadat a upozorněním
   na omezení. Postman runtime `pm.*` se neimplementuje.
@@ -24,7 +26,7 @@ jako obyčejný HTTP request s JSON tělem, bez introspekce/subscriptions.
 
 - macOS a Xcode Command Line Tools.
 - Rust stable včetně `cargo`.
-- Node.js 22 nebo novější a pnpm **11.25.0** podle `package.json`.
+- Node.js 22 nebo 24 a pnpm **11.25.0** podle `package.json`.
 - Fish pro níže uvedené příkazy.
 
 Pokud Command Line Tools ještě nemáš, spusť jejich instalaci a dokonči ji

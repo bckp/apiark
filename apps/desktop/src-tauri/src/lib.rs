@@ -12,7 +12,8 @@ use commands::collection::{
 use commands::cookies::{clear_cookie_jar, delete_cookie, get_cookie_jar};
 use commands::curl::{export_curl_command, parse_curl_command};
 use commands::environment::{
-    get_resolved_variables, load_environments, load_root_dotenv, save_environment,
+    get_resolved_variables, get_variable_names, load_environments, load_root_dotenv,
+    save_environment,
 };
 use commands::history::{clear_history, delete_history_entry, get_history, search_history};
 use commands::http::{send_request, send_request_with_scripts};
@@ -100,6 +101,7 @@ pub fn run() {
             load_environments,
             save_environment,
             get_resolved_variables,
+            get_variable_names,
             get_history,
             search_history,
             clear_history,

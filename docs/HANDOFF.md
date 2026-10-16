@@ -1,10 +1,16 @@
 # Předání interního forku
 
-Stav ověření: 16. 10. 2026, macOS arm64. Větev `codex/internal-fork`,
+Stav ověření: 16. 10. 2026, macOS arm64. Aktuální větev `codex/safe-variable-completion`,
 výchozí commit `46ba45acdc921bcf828c61190d8143e73525fd40`.
 Origin je `https://code.kepakovi.cz/bckp/apiark.git`; původní GitHub zůstává
 jako `upstream`. Ověření Git remote uspělo. **Push ani publikace neproběhly.**
 MIT licence a původní copyright v `LICENSE` jsou beze změny.
+
+Navazující úprava po kontrole `cemhun/apiark` přidává bezpečnou obnovu relace,
+ErrorBoundary panelů a našeptávání názvů proměnných bez hodnot v URL,
+parametrech, hlavičkách a Monaco editoru. Rozsah, ovládání a známá omezení
+jsou v [VARIABLE_COMPLETION.md](VARIABLE_COMPLETION.md). Workspaces,
+persistentní globals, nový DnD ani upgrade závislostí se nepřebíraly.
 
 ## Implementace
 
@@ -72,10 +78,10 @@ Finální `scripts/check.fish` skončil exit 0:
 | Kontrola | Výsledek na tomto Macu |
 |---|---|
 | Rust fmt | PASS |
-| apiark-core | 110 testů PASS: 62 unit, 32 převzatých regresí, 4 Postman, 12 runtime |
+| apiark-core | 112 testů PASS: 64 unit, 32 převzatých regresí, 4 Postman, 12 runtime |
 | CLI subprocess integrace | 2 testy PASS, včetně exit codes, pm/Promise chyb a výběru složky |
 | Desktop OAuth | 1 test PASS |
-| Frontend | 34 testů v 5 souborech PASS, žádné přeskočené testy |
+| Frontend | 45 testů v 8 souborech PASS, žádné přeskočené testy |
 | ESLint | PASS, 0 chyb a varování |
 | TypeScript + Vite production | PASS |
 | cargo check desktop | PASS |
@@ -88,6 +94,12 @@ Release smoke CLI provedl import, HTTP + `ark.test` + vizualizaci, JSON/HTML
 report (včetně escapování), export a reimport, JUnit a vynucené selhání s
 exit 1. Native proces aplikace při lokálním spuštění zůstal živý bez pádu;
 to není pohledové ověření vykresleného GUI. Byl ukončen pouze testovací proces.
+
+Našeptávání URL a skutečného Monaco editoru bylo navíc pohledově ověřené
+v izolovaném prohlížečovém náhledu se syntetickými daty, včetně vložení
+`{{apiToken}}` do JSON těla. Nejde o nové ruční ověření celé nativní aplikace.
+Release CLI a archivy v `target/artifacts` pocházejí z předchozí fáze;
+v této úpravě se znovu sestavuje macOS `.app` a provádějí CLI subprocess testy.
 
 Artefakty nejsou commitované:
 

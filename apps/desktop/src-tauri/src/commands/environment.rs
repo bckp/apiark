@@ -4,6 +4,25 @@ use std::path::Path;
 use crate::models::environment::{EnvironmentFile, EnvironmentScope};
 use crate::storage::environment;
 
+/// Autocomplete uses a separate names-only IPC contract.
+#[tauri::command]
+pub async fn get_variable_names(
+    collection_path: Option<String>,
+    source_path: Option<String>,
+    environment_name: Option<String>,
+    include_scopes: bool,
+    removed_names: Vec<String>,
+) -> Result<Vec<String>, String> {
+    apiark_core::scopes::variable_names(
+        collection_path.as_deref(),
+        source_path.as_deref(),
+        environment_name.as_deref(),
+        include_scopes,
+        &removed_names,
+    )
+    .map_err(|_| "Variable names could not be loaded".to_string())
+}
+
 /// Load variables from the collection root .env file only (no environment).
 #[tauri::command]
 pub async fn load_root_dotenv(collection_path: String) -> Result<HashMap<String, String>, String> {
