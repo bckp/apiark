@@ -1,77 +1,83 @@
 # ApiArk Internal
 
-Interní udržovací fork ApiArku pro vlastní používání na **macOS**.
-Desktopová aplikace a CLI sdílejí Rust jádro `apiark-core`, stejné kolekce
-a stejné provádění HTTP požadavků, skriptů a testů.
+[![CI](https://github.com/bckp/apiark/actions/workflows/ci.yml/badge.svg)](https://github.com/bckp/apiark/actions/workflows/ci.yml)
 
-## Funkce
+A maintenance fork of ApiArk for personal use on **macOS**.
+The desktop application and CLI share the `apiark-core` Rust library,
+collection format, and execution of HTTP requests, scripts, and tests.
 
-- Desktop pouze pro macOS, postavený na Tauri 2 a Reactu.
-- CLI pro macOS s reporty pro automatizaci.
-- Jediné Rust jádro `crates/apiark-core` pro kolekce, prostředí, interpolaci,
-  HTTP, cookies, redirecty, skripty, testy a Postman převody.
-- HTTP/REST, kolekce a složky, prostředí, autentizace, odpovědi a kolekční běh.
-- Našeptávání `{{proměnných}}` v URL, hodnotách parametrů/hlaviček a editoru;
-  návrhy obsahují pouze názvy, nikdy hodnoty. [Ovládání a rozsah](docs/VARIABLE_COMPLETION.md).
-- Post-response vizualizace `image`, `text`, `json` přes `ark.visualize`.
-- Postman Collection v2.1 import/export s uchováním metadat a upozorněním
-  na omezení. Postman runtime `pm.*` se neimplementuje.
+## Features
 
-Web, AI, MCP server, VS Code rozšíření, pluginový systém, vestavěný terminál,
-proxy capture, monitoring, mock servery, HTML dokumentace a specializované
-protokolové backendy jsou odstraněné. Legacy GraphQL request lze používat
-jako obyčejný HTTP request s JSON tělem, bez introspekce/subscriptions.
+- A macOS desktop application built with Tauri 2 and React.
+- A macOS CLI with reports for automation.
+- A shared Rust core in `crates/apiark-core` for collections, environments,
+  variable interpolation, HTTP, cookies, redirects, scripts, tests, and Postman conversions.
+- HTTP/REST requests, collections and folders, environments, authentication,
+  response inspection, and collection runs.
+- `{{variable}}` completion in URLs, parameter/header values, and the editor.
+  Suggestions show names only, never values. [Scope and controls](docs/VARIABLE_COMPLETION.md).
+- Post-response `image`, `text`, and `json` visualizations through `ark.visualize`.
+- Postman Collection v2.1 import/export with preserved metadata and explicit
+  compatibility warnings. The Postman `pm.*` runtime is not implemented.
 
-## Požadavky pro build na Macu
+The web application, AI integrations, MCP server, VS Code extension, plugin
+system, embedded terminal, proxy capture, monitoring, mock servers, HTML
+documentation generator, and specialized protocol backends have been removed.
+Legacy GraphQL requests can run as ordinary HTTP requests with a JSON body,
+without introspection or subscriptions.
 
-- macOS a Xcode Command Line Tools.
-- Rust stable včetně `cargo`.
-- Node.js 22 nebo 24 a pnpm **11.25.0** podle `package.json`.
-- Fish pro níže uvedené příkazy.
+## Build requirements
 
-Pokud Command Line Tools ještě nemáš, spusť jejich instalaci a dokonči ji
-v systémovém dialogu:
+- macOS with Xcode Command Line Tools.
+- Stable Rust, including `cargo`.
+- Node.js 22 or 24 and pnpm **11.25.0**, as specified in `package.json`.
+- Fish for the commands below.
+
+If Xcode Command Line Tools are missing, start the installer and complete
+the system dialog:
 
 ```fish
 xcode-select --install
 ```
 
-Všechny další příkazy spouštěj z kořene repozitáře. Nainstaluj závislosti:
+Run the remaining commands from the repository root. Install dependencies:
 
 ```fish
 pnpm install --frozen-lockfile
 ```
 
-## Sestavení aplikace
+## Build the desktop application
 
-Lokální release build bez distribučního podpisu:
+Create a local release build without a distribution signature:
 
 ```fish
 pnpm --filter @apiark/desktop tauri build --bundles app --no-sign --ci
 ```
 
-Výsledkem je `target/release/bundle/macos/ApiArk Internal.app`. Spuštění:
+The application is created at `target/release/bundle/macos/ApiArk Internal.app`.
+Launch it with:
 
 ```fish
 open 'target/release/bundle/macos/ApiArk Internal.app'
 ```
 
-Build byl ověřený na Macu s Apple Silicon. Podpis vlastní Developer ID
-identitou, notarizace a další macOS build varianty jsou popsané v
-[návodu pro build a vydání](docs/BUILD_AND_RELEASE.md).
-Připravený je také [ručně spouštěný podepsaný build na GitHub Actions](docs/BUILD_AND_RELEASE.md#podepsaný-build-na-githubu)
-pro Apple Silicon a Intel, s volitelným draftem releasu.
+The local build has been verified on Apple Silicon. Developer ID signing,
+notarization, and other macOS build variants are covered in the
+[build and release guide](docs/BUILD_AND_RELEASE.md).
+A [manually triggered GitHub workflow](docs/BUILD_AND_RELEASE.md#podepsaný-build-na-githubu)
+is available for signed Apple Silicon and Intel builds, with an optional
+draft release. Its first signed run still requires distribution secrets.
 
-Pro vývoj s automatickým načítáním změn:
+For development with automatic reloading:
 
 ```fish
 pnpm --filter @apiark/desktop tauri dev
 ```
 
-## Sestavení a použití CLI
+## Build and use the CLI
 
-CLI sestavuj do samostatného adresáře: desktopový i CLI binární soubor se
-jmenují `apiark`.
+Use a separate target directory for the CLI: both the desktop executable
+and the CLI are named `apiark`.
 
 ```fish
 cargo build -p apiark-cli --release --locked --target-dir target/cli
@@ -79,42 +85,45 @@ target/cli/release/apiark --help
 target/cli/release/apiark run ./my-collection --reporter json --output ./report.json
 ```
 
-Výsledný binární soubor je `target/cli/release/apiark`. Podporované reporty
-jsou `cli`, `json`, `junit` a `html`. Příklady importu, exportu, prostředí
-a běhu složek najdeš v [návodu CLI](docs/BUILD_AND_RELEASE.md#cli).
+The executable is created at `target/cli/release/apiark`. Supported report
+formats are `cli`, `json`, `junit`, and `html`. See the
+[CLI guide](docs/BUILD_AND_RELEASE.md#cli) for import/export, environment,
+and folder execution examples.
 
-Desktop i CLI provádějí pre-request skripty, post-response skripty, `ark.test`
-a YAML assertions. Chyba skriptu nebo testu vrací v CLI nenulový exit code.
-Nepodporované Promise testy nemohou skončit jako úspěšný přeskočený test.
+Both the desktop and CLI execute pre-request scripts, post-response scripts,
+`ark.test`, and YAML assertions. Script errors and test failures produce a
+nonzero CLI exit code. Unsupported Promise tests fail explicitly.
 
-## Ověření změn
+## Validate changes
 
-Kompletní lokální kontrola formátování, Rust testů, Clippy, frontendových
-testů, lintu, frontend buildu a desktopové kompilace:
+Run the local checks for formatting, Rust tests, Clippy, frontend tests,
+lint, the frontend build, and desktop compilation:
 
 ```fish
 fish scripts/check.fish
 ```
 
-Automatické kontroly doplň ručním vyzkoušením aplikace na Macu, zvlášť při
-změnách oken, záložek, editorů a ukládacích dialogů.
+Also test the application manually on a Mac, particularly after changes
+to windows, tabs, editors, or save dialogs.
 
-## Dokumentace
+## Documentation
 
-- [Build, CLI, data, CI a podepsané vydání](docs/BUILD_AND_RELEASE.md)
-- [Postman kompatibilita a omezení](docs/POSTMAN.md)
-- [Přesné API a limity vizualizací](docs/VISUALIZATIONS.md)
-- [Měření výkonu](docs/PERFORMANCE.md)
-- [Ověřený výchozí stav a plán](docs/FORK_PLAN.md)
-- [Stav předání a neověřené kroky](docs/HANDOFF.md)
+The detailed guides below are currently in Czech:
 
-Fork používá bundle ID `cz.kepakovi.apiark.internal` a data v
-`~/.apiark-internal`. Původní updater je odstraněný. Kolekce zůstávají ve
-stejném YAML formátu, rozšířeném o volitelná Postman metadata.
+- [Build, CLI, data, CI, and signed releases](docs/BUILD_AND_RELEASE.md)
+- [Postman compatibility and limitations](docs/POSTMAN.md)
+- [Visualization API and limits](docs/VISUALIZATIONS.md)
+- [Performance measurements](docs/PERFORMANCE.md)
+- [Verified baseline and fork plan](docs/FORK_PLAN.md)
+- [Handoff status and remaining verification](docs/HANDOFF.md)
 
-## Původ a licence
+The fork uses bundle ID `cz.kepakovi.apiark.internal` and stores application
+data in `~/.apiark-internal`. The original updater has been removed.
+Collections retain the YAML format, extended with optional Postman metadata.
 
-Fork vychází z [ApiArku](https://github.com/berbicanes/apiark), z commitu
-`46ba45acdc921bcf828c61190d8143e73525fd40`. MIT licence a původní copyright
-jsou zachované v [LICENSE](LICENSE). Při distribuci aplikace nebo CLI přibal
-také tento licenční soubor.
+## Origin and license
+
+This fork is based on [ApiArk](https://github.com/berbicanes/apiark), commit
+`46ba45acdc921bcf828c61190d8143e73525fd40`. The MIT license and original
+copyright notices are preserved in [LICENSE](LICENSE). Include this license
+file when distributing the desktop application or CLI.
