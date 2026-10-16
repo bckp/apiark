@@ -18,6 +18,7 @@ import { ResponsePanel } from "@/components/response/response-panel";
 import { ConsoleBottomBar } from "@/components/console/console-panel";
 import { ToastContainer } from "@/components/ui/toast-container";
 import { PanelDivider } from "@/components/ui/panel-divider";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
   useTabStore,
   useActiveTab,
@@ -233,16 +234,20 @@ export default function App() {
           />
         )}
         {!zen && sidebar && (
-          <SidePanel
-            activeView={view}
-            onOpenImport={() => setDialog("import")}
-          />
+          <ErrorBoundary key={view} label="Sidebar">
+            <SidePanel
+              activeView={view}
+              onOpenImport={() => setDialog("import")}
+            />
+          </ErrorBoundary>
         )}
         <main className="flex min-w-0 flex-1 flex-col">
           <TabBar />
           {active ? (
             <>
-              <UrlBar />
+              <ErrorBoundary key={`url-${activeId}`} label="Request URL">
+                <UrlBar />
+              </ErrorBoundary>
               <div
                 ref={container}
                 className={`flex min-h-0 flex-1 ${horizontal ? "flex-row" : "flex-col"}`}
@@ -256,7 +261,9 @@ export default function App() {
                       : { height: `${ratio * 100}%` }
                   }
                 >
-                  <RequestPanel />
+                  <ErrorBoundary key={activeId} label="Request editor">
+                    <RequestPanel />
+                  </ErrorBoundary>
                 </div>
                 <PanelDivider
                   direction={horizontal ? "horizontal" : "vertical"}
@@ -273,7 +280,9 @@ export default function App() {
                       .updateSettings({ panelRatio: 0.5 })
                   }
                 />
-                <ResponsePanel />
+                <ErrorBoundary key={activeId} label="Response">
+                  <ResponsePanel />
+                </ErrorBoundary>
               </div>
             </>
           ) : (
@@ -281,55 +290,70 @@ export default function App() {
               Create or open a request to begin.
             </div>
           )}
-          <ConsoleBottomBar />
+          <ErrorBoundary label="Console">
+            <ConsoleBottomBar />
+          </ErrorBoundary>
         </main>
       </div>
-      <Suspense fallback={null}>
-        {dialog === "settings" && (
-          <SettingsDialog open onOpenChange={(v) => !v && setDialog(null)} />
-        )}
-        {dialog === "import" && (
-          <ImportDialog open onOpenChange={(v) => !v && setDialog(null)} />
-        )}
-        {dialog === "curl" && (
-          <CurlImportDialog open onOpenChange={(v) => !v && setDialog(null)} />
-        )}
-        {dialog === "runner" && (
-          <CollectionRunnerDialog
-            open
-            onOpenChange={(v) => !v && setDialog(null)}
-          />
-        )}
-        {dialog === "save" && (
-          <SaveAsDialog
-            open
-            onOpenChange={(v) => !v && setDialog(null)}
-            defaultName={active?.name ?? ""}
-            onSave={async (collectionPath, dir, filename, name) => {
-              const target = useTabStore.getState().activeTabId;
-              if (!target) return;
-              try {
-                const filePath = await useCollectionStore
-                  .getState()
-                  .createRequest(dir, filename, name, collectionPath);
-                useTabStore.setState((state) => ({
-                  tabs: state.tabs.map((t) =>
-                    t.id === target
-                      ? { ...t, filePath, collectionPath, name, isDirty: true }
-                      : t,
-                  ),
-                }));
-                await useTabStore.getState().save(target);
-                setDialog(null);
-              } catch (error) {
-                const { useToastStore } = await import("@/stores/toast-store");
-                useToastStore.getState().showError(String(error));
-              }
-            }}
-          />
-        )}
-        <ResponseDiffDialog />
-      </Suspense>
+      <ErrorBoundary key={dialog} label="Dialog">
+        <Suspense fallback={null}>
+          {dialog === "settings" && (
+            <SettingsDialog open onOpenChange={(v) => !v && setDialog(null)} />
+          )}
+          {dialog === "import" && (
+            <ImportDialog open onOpenChange={(v) => !v && setDialog(null)} />
+          )}
+          {dialog === "curl" && (
+            <CurlImportDialog
+              open
+              onOpenChange={(v) => !v && setDialog(null)}
+            />
+          )}
+          {dialog === "runner" && (
+            <CollectionRunnerDialog
+              open
+              onOpenChange={(v) => !v && setDialog(null)}
+            />
+          )}
+          {dialog === "save" && (
+            <SaveAsDialog
+              open
+              onOpenChange={(v) => !v && setDialog(null)}
+              defaultName={active?.name ?? ""}
+              onSave={async (collectionPath, dir, filename, name) => {
+                const target = useTabStore.getState().activeTabId;
+                if (!target) return;
+                try {
+                  const filePath = await useCollectionStore
+                    .getState()
+                    .createRequest(dir, filename, name, collectionPath);
+                  useTabStore.setState((state) => ({
+                    tabs: state.tabs.map((t) =>
+                      t.id === target
+                        ? {
+                            ...t,
+                            filePath,
+                            collectionPath,
+                            name,
+                            isDirty: true,
+                          }
+                        : t,
+                    ),
+                  }));
+                  await useTabStore.getState().save(target);
+                  setDialog(null);
+                } catch (error) {
+                  const { useToastStore } = await import(
+                    "@/stores/toast-store"
+                  );
+                  useToastStore.getState().showError(String(error));
+                }
+              }}
+            />
+          )}
+          <ResponseDiffDialog />
+        </Suspense>
+      </ErrorBoundary>
       <ToastContainer />
     </div>
   );
