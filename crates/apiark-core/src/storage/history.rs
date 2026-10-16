@@ -231,7 +231,7 @@ impl HistoryDb {
     /// Insert a monitor result.
     pub fn insert_monitor_result(
         &self,
-        result: &crate::scheduler::MonitorResult,
+        result: &MonitorResult,
     ) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {e}"))?;
         conn.execute(
@@ -257,7 +257,7 @@ impl HistoryDb {
         &self,
         monitor_id: &str,
         limit: usize,
-    ) -> Result<Vec<crate::scheduler::MonitorResult>, String> {
+    ) -> Result<Vec<MonitorResult>, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock error: {e}"))?;
         let mut stmt = conn
             .prepare(
@@ -268,7 +268,7 @@ impl HistoryDb {
 
         let results = stmt
             .query_map(params![monitor_id, limit as i64], |row| {
-                Ok(crate::scheduler::MonitorResult {
+                Ok(MonitorResult {
                     id: row.get(0)?,
                     monitor_id: row.get(1)?,
                     timestamp: row.get(2)?,
@@ -286,4 +286,18 @@ impl HistoryDb {
 
         Ok(results)
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MonitorResult {
+    pub id: i64,
+    pub monitor_id: String,
+    pub timestamp: String,
+    pub total_requests: usize,
+    pub total_passed: usize,
+    pub total_failed: usize,
+    pub total_time_ms: u64,
+    pub status: String, // "pass" | "fail"
+    pub error: Option<String>,
 }

@@ -1,0 +1,37 @@
+[package]
+name = "apiark-core"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Shared ApiArk collection, HTTP and scripting runtime"
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "rustls-tls", "multipart", "stream"] }
+url = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "net", "io-util"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+thiserror = "2"
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+regex = "1"
+rand = "0.8"
+rusqlite = { version = "0.31", features = ["bundled"] }
+rquickjs = { version = "0.9", features = ["parallel"] }
+dirs = "5"
+sha2 = "0.10"
+base64 = "0.22"
+urlencoding = "2"
+hmac = "0.12"
+md-5 = "0.10"
+jsonwebtoken = "9"
+hex = "0.4"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+md4 = "0.10"
+des = "0.8"
+walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3"

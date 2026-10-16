@@ -27,16 +27,4 @@ pub struct MonitorStatus {
     pub run_count: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MonitorResult {
-    pub id: i64,
-    pub monitor_id: String,
-    pub timestamp: String,
-    pub total_requests: usize,
-    pub total_passed: usize,
-    pub total_failed: usize,
-    pub total_time_ms: u64,
-    pub status: String, // "pass" | "fail"
-    pub error: Option<String>,
-}
+pub use apiark_core::storage::history::MonitorResult;
