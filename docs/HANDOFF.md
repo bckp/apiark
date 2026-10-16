@@ -1,9 +1,12 @@
 # Předání interního forku
 
-Stav ověření: 16. 10. 2026, macOS arm64. Aktuální větev `codex/content-type-header`,
+Stav ověření: 16. 10. 2026, macOS arm64. Aktuální větev `codex/github-ci`,
 výchozí commit `46ba45acdc921bcf828c61190d8143e73525fd40`.
 Origin je `https://code.kepakovi.cz/bckp/apiark.git`; původní GitHub zůstává
-jako `upstream`. Ověření Git remote uspělo. **Push ani publikace neproběhly.**
+jako `upstream`. Remote `github` je `git@github.com:bckp/apiark.git`.
+Po výslovném schválení uživatelem byl fork pushnut do veřejného GitHub main.
+První CI běh: https://github.com/bckp/apiark/actions/runs/38955818690
+Distribuční release zveřejněný není.
 MIT licence a původní copyright v `LICENSE` jsou beze změny.
 
 Navazující úprava po kontrole `cemhun/apiark` přidává bezpečnou obnovu relace,
@@ -16,7 +19,9 @@ Následná kontrola dalších forků potvrdila dvojitý Content-Type i v našem
 jádru. Oprava doplňuje výchozí typ JSON/XML/raw/binary pouze při chybějící
 hlavičce a je ověřená 20 požadavky přes skutečný lokální HTTP server.
 Přibalení MIT licence a workflow pro podepsaný/notarizovaný macOS preview
-jsou připravené; veřejné vydání ani přesun na GitHub neproběhly.
+jsou na GitHubu; veřejné vydání aplikace neproběhlo. Environment `macos-release`
+má omezení na main, Team ID a název Developer ID identity. Privátní klíč ani
+notarizační credentials nebyly exportované ani přenesené do Secrets.
 Podrobné výsledky porovnání tří forků, reprodukcí a kontroly podpisů jsou
 v [reportu z 16. 10. 2026](FORK_REVIEW_2026-10-16.txt).
 
@@ -138,10 +143,11 @@ rychlosti skutečného startu GUI se neprovedlo.
    Platná Developer ID identita je nyní dostupná; notarizační přístup ještě
    ověřený není. Nový GitHub workflow vyžaduje vlastní Secrets a jeho první
    skutečný běh teprve musí proběhnout. Lokální build zůstává bez distribučního podpisu.
-4. Spustit připravenou CI matici na skutečných macOS/Linux/Windows runnerech.
-   Lokálně je ověřený jen macOS arm64. Windows/Linux, Intel/universal Mac
-   a hostovaná CI zde neběžely. Definice jsou určené pro GitHub Actions;
-   origin na Forgejo se v této práci neměnil.
+4. Hostované testy a buildy už prošly na GitHubu: core/CLI na macOS arm64,
+   macOS Intel, Linuxu a Windows; desktop na obou typech Maců. Archivy,
+   skutečné architektury a MIT licence byly zkontrolované. Universal Mac
+   build ani ruční GUI testy na jednotlivých runnerech neproběhly.
+   Origin na Forgejo se v této práci neměnil.
 
 Postman runtime není implementovaný; podporovaná podmnožina a odmítnuté
 konstrukce jsou v [POSTMAN.md](POSTMAN.md). Mapový editor neumí editovat

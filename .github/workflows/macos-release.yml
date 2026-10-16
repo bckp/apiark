@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  checks: read
 
 concurrency:
   group: macos-release
@@ -43,6 +44,15 @@ jobs:
       - name: Install Fish
         shell: sh
         run: brew install fish
+      - name: Require passing CI for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -l ci_result (gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?check_name=CI%20required&filter=latest" --jq '.check_runs[] | select(.app.slug == "github-actions") | [.status, .conclusion] | @tsv'); or exit 1
+          if not contains -- (printf 'completed\tsuccess') $ci_result
+              printf 'CI required must pass for this commit before signing.\n' >&2
+              exit 1
+          end
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 11.25.0
@@ -145,10 +155,13 @@ jobs:
           RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: |
           set -l release_tag "v$RELEASE_VERSION"
-          set -l tagged_commit (gh api "repos/$GITHUB_REPOSITORY/commits/$release_tag" --jq .sha 2>/dev/null)
-          if test -n "$tagged_commit"; and test "$tagged_commit" != "$GITHUB_SHA"
-              printf 'Tag %s points to another commit; bump the fork version before releasing.\n' "$release_tag" >&2
-              exit 1
+          set -l matching_tag (gh api --paginate "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$release_tag" --jq '.[] | select(.ref == "refs/tags/v" + env.RELEASE_VERSION) | .ref'); or exit 1
+          if test -n "$matching_tag"
+              set -l tagged_commit (gh api "repos/$GITHUB_REPOSITORY/commits/$release_tag" --jq .sha); or exit 1
+              if test "$tagged_commit" != "$GITHUB_SHA"
+                  printf 'Tag %s points to another commit; bump the fork version before releasing.\n' "$release_tag" >&2
+                  exit 1
+              end
           end
           set -l release_files release-artifacts/*.app.zip
           test (count $release_files) -eq 2; or exit 1

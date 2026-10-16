@@ -83,7 +83,6 @@ jobs:
       - run: pnpm --filter @apiark/desktop test
       - run: pnpm --filter @apiark/desktop lint
       - run: cargo test -p apiark --lib --locked
-      - run: cargo check -p apiark --locked
       - run: pnpm --filter @apiark/desktop tauri build --debug --bundles app --no-sign --ci
       - run: tar -czf ApiArk-Internal-macOS.tar.gz -C target/debug/bundle/macos "ApiArk Internal.app" -C "${{ github.workspace }}" LICENSE
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

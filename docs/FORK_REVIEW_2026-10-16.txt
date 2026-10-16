@@ -180,5 +180,7 @@ je přibalená uvnitř aplikace. Distribuční podpis ani notarizace neproběhly
 Ručně spouštěný GitHub workflow pro arm64/Intel je připravený, včetně
 kontrol Developer ID, Team ID, hardened runtime, ticketu, verze a architektury.
 Má volitelný draft prerelease až po úspěchu obou buildů. Hostovaný běh,
-nastavení Secrets, export klíče, přesun repozitáře ani publikace neproběhly.
-Viz BUILD_AND_RELEASE.md. Origin zůstává na Forgejo.
+nastavení Secrets, export klíče, přesun repozitáře ani publikace v okamžiku
+této kontroly neproběhly. Následně uživatel schválil push forku do veřejného
+bckp/apiark a proběhly hostované CI testy a buildy na všech cílových systémech.
+Aktuální stav je v HANDOFF.md a BUILD_AND_RELEASE.md. Origin zůstává na Forgejo.

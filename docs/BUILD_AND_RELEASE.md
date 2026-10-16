@@ -138,6 +138,13 @@ gh run list --repo bckp/apiark --workflow ci.yml
 Vývojové změny je vhodné posílat na větev a do `main` přes pull request.
 Nepřepisuj historii main ani již vydané tagy.
 
+První hostované testy a buildy z 16. 10. 2026 jsou v
+[běhu CI](https://github.com/bckp/apiark/actions/runs/38955818690).
+Ověřené byly všechny čtyři varianty CLI a oba macOS desktop buildy.
+Stažené archivy mají odpovídající architektury a MIT licenci; Apple Silicon
+CLI bylo navíc lokálně spuštěné s `--help`. Nejde o ruční GUI test aplikace
+na všech runnerech ani o ověření distribučního podpisu.
+
 ## Podpis a notarizace
 
 Nová lokální kontrola 16. 10. 2026 našla platnou **Developer ID Application**
@@ -187,8 +194,10 @@ podpis při pull requestu a běží na nativních runnerech pro Apple Silicon
 (`macos-15`) a Intel (`macos-15-intel`). Běžné CLI buildy dál zajišťuje CI;
 tento release workflow distribuuje desktopovou aplikaci.
 
-V GitHub Settings vytvoř environment `macos-release`, ideálně s požadovaným
-schválením vydání. Do něj nastav tyto **Secrets**:
+Environment `macos-release` už je založený a omezený na větev `main`.
+Veřejné údaje `APPLE_SIGNING_IDENTITY` a `APPLE_TEAM_ID` jsou nastavené.
+V [nastavení prostředí](https://github.com/bckp/apiark/settings/environments)
+je případně možné přidat schválení vydání. Ještě je potřeba nastavit tyto **Secrets**:
 
 | Secret | Obsah |
 |---|---|
@@ -209,7 +218,8 @@ uložení Secrets a první notarizační přihlášení nebyly v této práci pr
 Tauri Action importuje certifikát na dočasném GitHub runneru; konfigurace
 nevyžaduje přístup k lokálnímu Macu během buildu.
 
-Workflow nejprve provede `scripts/check.fish`. Potom oficiální Tauri Action
+Workflow vyžaduje úspěšný `CI required` pro přesně tentýž commit a znovu
+provede `scripts/check.fish`. Potom oficiální Tauri Action
 sestaví a podepíše `.app` a předá ji notarizaci. Navazující kontrola vyžaduje
 platné sealed resources, Developer ID Application autoritu, očekávané Team ID,
 hardened runtime, přiložený notarizační ticket a úspěšný Gatekeeper assessment.
@@ -229,8 +239,12 @@ a workspace `Cargo.lock`. Původní `v0.4.6` může již ukazovat na upstream;
 workflow odmítne založit release, pokud tag ukazuje na jiný commit.
 Existující release se nepřepisuje.
 
-Příprava workflow byla ověřená lokálním parsováním YAML a kontrolou Fish
-syntaxe. Podpis, notarizace, oba GitHub runnery a draft release musí ještě
-projít prvním skutečným hostovaným během po nastavení Secrets.
+Příprava workflow byla ověřená pomocí actionlint, parsováním YAML a kontrolou
+Fish syntaxe. Kontrola přesného CI commitu byla ověřená přes skutečné GitHub
+API; ochrana release tagů také pěti syntetickými scénáři s mockovaným `gh`
+(nový tag, shodný tag, kolize, chyba API a chyba vytvoření releasu).
+Podpis, notarizace a draft release musí ještě projít prvním skutečným
+hostovaným během po nastavení Secrets. Buildy bez distribučního podpisu
+na obou GitHub Mac runnerech již prošly v běžné CI.
 
 Použité runner labels odpovídají [dokumentaci GitHubu](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
