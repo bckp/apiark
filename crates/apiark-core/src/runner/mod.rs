@@ -156,7 +156,18 @@ pub async fn run_collection(
                                                 t.error.as_deref().unwrap_or("failed")
                                             )
                                         })
-                                        .chain(response.assertion_results.iter().filter(|a|!a.passed).map(|a|format!("Assertion {} {}: expected {}, got {}",a.path,a.operator,a.expected,a.actual)))
+                                        .chain(
+                                            response
+                                                .assertion_results
+                                                .iter()
+                                                .filter(|a| !a.passed)
+                                                .map(|a| {
+                                                    format!(
+                                                        "Assertion {} {}: expected {}, got {}",
+                                                        a.path, a.operator, a.expected, a.actual
+                                                    )
+                                                }),
+                                        )
                                         .collect::<Vec<_>>()
                                         .join("; "),
                                 );

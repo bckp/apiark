@@ -41,10 +41,6 @@
     "location": "位置",
     "creating": "创建中...",
     "exportPostman": "导出为 Postman",
-    "exportOpenapi": "导出为 OpenAPI",
-    "exportApiark": "导出为 ApiArk ZIP",
-    "startMockServer": "启动 Mock 服务器",
-    "generateDocs": "生成文档",
     "requestName": "请求名称：",
     "folderName": "文件夹名称：",
     "openCollectionFirst": "请先打开集合以管理环境",
@@ -250,17 +246,7 @@
     "exportState": "导出应用状态",
     "importState": "导入应用状态",
     "exporting": "导出中...",
-    "importing": "导入中...",
-    "updates": "更新",
-    "updateChannel": "更新通道",
-    "stable": "稳定版",
-    "beta": "Beta",
-    "nightly": "Nightly",
-    "checkForUpdates": "检查更新",
-    "upToDate": "已是最新版本",
-    "updateAvailable": "有可用更新：{{version}}",
-    "shortcuts": "键盘快捷键",
-    "recording": "请按下组合键..."
+    "importing": "导入中..."
   },
   "runner": {
     "title": "集合运行器",
@@ -289,11 +275,6 @@
     "warnings": "{{count}} 个警告",
     "source": "来源",
     "postman": "Postman v2.1",
-    "insomnia": "Insomnia v4",
-    "bruno": "Bruno",
-    "openapi": "OpenAPI 3.x",
-    "hoppscotch": "Hoppscotch",
-    "har": "HAR (HTTP Archive)",
     "next": "下一步",
     "back": "上一步",
     "done": "完成",
@@ -303,38 +284,7 @@
   "export": {
     "title": "导出集合",
     "format": "格式",
-    "postman": "Postman v2.1",
-    "openapi": "OpenAPI 3.0",
-    "apiark": "ApiArk YAML"
-  },
-  "commandPalette": {
-    "title": "命令面板",
-    "placeholder": "输入命令...",
-    "noResults": "没有匹配的命令",
-    "general": "通用",
-    "view": "视图",
-    "tabs": "标签页",
-    "requests": "请求",
-    "environments": "环境",
-    "newHttpRequest": "新建 HTTP 请求",
-    "newGraphqlRequest": "新建 GraphQL 请求",
-    "newWebsocket": "新建 WebSocket 连接",
-    "newSse": "新建 SSE 连接",
-    "newGrpc": "新建 gRPC 请求",
-    "openSettings": "设置",
-    "importCurl": "导入 cURL",
-    "importCollection": "导入集合",
-    "compareResponses": "对比响应",
-    "mockServers": "Mock 服务器",
-    "scheduledMonitors": "定时监控",
-    "generateDocs": "生成 API 文档",
-    "runCollection": "运行集合",
-    "toggleZenMode": "切换专注模式",
-    "toggleTerminal": "切换终端",
-    "toggleConsole": "切换控制台",
-    "switchTo": "切换到",
-    "navigate": "使用方向键导航",
-    "enterToSelect": "回车选择"
+    "postman": "Postman v2.1"
   },
   "common": {
     "save": "保存",
@@ -378,17 +328,6 @@
     "failedToImport": "导入失败：{{reason}}",
     "failedToExport": "导出失败：{{reason}}"
   },
-  "onboarding": {
-    "welcome": "欢迎使用 ApiArk",
-    "tagline": "本地优先的 API 开发。无需账户。无需云端。极致速度。",
-    "startScratch": "从头开始",
-    "startScratchDesc": "创建包含示例请求的示范集合",
-    "importExisting": "导入现有集合",
-    "importExistingDesc": "从 Postman、Insomnia、Bruno 或 OpenAPI 导入",
-    "openFolder": "打开文件夹",
-    "openFolderDesc": "打开包含现有 ApiArk 集合的目录",
-    "chooseTheme": "选择主题"
-  },
   "console": {
     "title": "控制台",
     "terminal": "终端",
@@ -401,111 +340,10 @@
     "warn": "warn",
     "noLogs": "暂无控制台输出"
   },
-  "grpc": {
-    "title": "gRPC",
-    "loadProto": "加载 .proto",
-    "service": "服务",
-    "method": "方法",
-    "invoke": "调用",
-    "metadata": "元数据",
-    "requestBody": "请求体 (JSON)",
-    "responseBody": "响应",
-    "loadProtoToStart": "加载 .proto 文件以开始",
-    "selectMethodToSend": "选择方法并发送请求"
-  },
-  "graphql": {
-    "query": "GraphQL 查询",
-    "variables": "变量",
-    "variablesJson": "变量 (JSON)",
-    "operationName": "操作名称（可选）",
-    "fetchSchema": "获取 Schema（自省）",
-    "fetchingSchema": "获取中...",
-    "schema": "Schema",
-    "schemaTypes": "Schema 类型"
-  },
-  "mock": {
-    "title": "Mock 服务器",
-    "start": "启动 Mock 服务器",
-    "stop": "停止",
-    "stopServer": "停止服务器",
-    "port": "端口",
-    "latency": "延迟 (ms)",
-    "errorRate": "错误率 %",
-    "running": "运行中",
-    "stopped": "已停止",
-    "collection": "集合",
-    "starting": "启动中...",
-    "noServers": "没有正在运行的 Mock 服务器",
-    "endpoints": "端点",
-    "endpoint": "端点",
-    "requestLog": "请求日志",
-    "clearLogs": "清除日志",
-    "waitingForRequests": "等待 localhost 上的请求：",
-    "selectServer": "选择服务器查看详情",
-    "createDesc": "从集合创建本地 Mock 服务器",
-    "newMockServer": "新建 Mock 服务器"
-  },
-  "monitor": {
-    "title": "监控",
-    "create": "创建监控",
-    "schedule": "计划",
-    "lastRun": "上次运行",
-    "nextRun": "下次运行",
-    "enabled": "已启用",
-    "disabled": "已禁用",
-    "createDesc": "安排自动集合运行",
-    "newMonitor": "新建监控"
-  },
-  "docs": {
-    "title": "API 文档",
-    "generate": "生成",
-    "generateDocs": "生成文档",
-    "preview": "预览",
-    "html": "HTML",
-    "markdown": "Markdown",
-    "generating": "正在生成文档...",
-    "generateDesc": "从集合生成文档"
-  },
   "diff": {
     "title": "响应对比",
     "snapshot": "快照",
     "compare": "对比"
-  },
-  "trash": {
-    "title": "回收站",
-    "restore": "恢复",
-    "emptyTrash": "清空回收站",
-    "deletedAt": "删除于 {{date}}"
-  },
-  "migration": {
-    "title": "集合格式更新",
-    "newerFormat": "较新的集合格式",
-    "message": "此集合使用格式 v{{old}}。当前版本为 v{{new}}。",
-    "upgrade": "升级",
-    "readOnly": "以只读方式打开",
-    "upgradeHint": "升级将重写集合文件。请先提交你的更改。"
-  },
-  "websocket": {
-    "connect": "连接",
-    "disconnect": "断开",
-    "send": "发送",
-    "connected": "已连接",
-    "disconnected": "已断开",
-    "messages": "消息",
-    "connectToStart": "连接以开始接收数据流"
-  },
-  "sse": {
-    "connect": "连接",
-    "disconnect": "断开",
-    "events": "事件",
-    "connected": "已连接",
-    "disconnected": "已断开",
-    "connectToStart": "连接以开始接收数据流"
-  },
-  "ai": {
-    "title": "AI 助手",
-    "comingSoon": "AI Assistant",
-    "comingSoonDesc": "Generate API requests from natural language and auto-generate tests from responses. Configure your AI provider in Settings."
   },
   "cookies": {
     "title": "Cookie 罐",
@@ -526,31 +364,9 @@
     "persistCookies": "持久化 Cookies",
     "persistCookiesDesc": "在应用重启后保留 Cookies"
   },
-  "tour": {
-    "skip": "跳过引导",
-    "back": "上一步",
-    "next": "下一步",
-    "getStarted": "开始使用",
-    "of": "/",
-    "collectionsSidebar": "集合侧边栏",
-    "environmentSelector": "环境选择器",
-    "requestTabs": "请求标签页",
-    "urlBar": "URL 栏",
-    "queryParameters": "查询参数",
-    "requestHeaders": "请求头",
-    "requestBody": "请求体",
-    "authentication": "认证",
-    "scripts": "脚本",
-    "testsAssertions": "测试与断言",
-    "responseViewer": "响应查看器",
-    "sendFirstRequest": "发送你的第一个请求！"
-  },
   "confirmDelete": {
     "title": "确认删除",
     "request": "删除 \"{{name}}\"？",
     "collection": "删除集合 \"{{name}}\"？这将把整个集合移至回收站。"
-  },
-  "audit": {
-    "title": "审计日志"
   }
 }

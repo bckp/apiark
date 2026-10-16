@@ -35,7 +35,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     try {
       const settings = await getSettings();
       set({ settings, loaded: true });
-    } catch (err) {
+    } catch {
       // Settings load failure on startup — use defaults silently but warn
       import("@/stores/toast-store").then(({ useToastStore }) =>
         useToastStore.getState().showWarning("Could not load settings — using defaults"),

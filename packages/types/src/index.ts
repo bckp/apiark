@@ -156,6 +156,7 @@ export interface ResponseData {
   headers: KeyValuePair[];
   cookies: CookieData[];
   body: string;
+  bodyBase64?: string;
   timeMs: number;
   sizeBytes: number;
   truncated?: boolean;
@@ -207,15 +208,6 @@ export interface CollectionDefaults {
   sendCookies: boolean;
   storeCookies: boolean;
   persistCookies: boolean;
-}
-
-// ── Migration ──
-
-export interface VersionStatus {
-  collectionVersion: number;
-  currentVersion: number;
-  needsMigration: boolean;
-  isNewer: boolean;
 }
 
 // ── Scripting & Testing ──
@@ -394,6 +386,7 @@ export type ExportFormat = "postman";
 // ── Cookie Jar ──
 
 export interface CookieJarEntry {
+  hostOnly: boolean;
   name: string;
   value: string;
   domain: string;
@@ -445,10 +438,6 @@ export interface Tab {
   collectionPath: string | null;
   isDirty: boolean;
   protocol: TabProtocol;
-
-  // GraphQL state (when protocol === "graphql")
-
-  // gRPC state (when protocol === "grpc")
 
   // Request state
   method: HttpMethod;

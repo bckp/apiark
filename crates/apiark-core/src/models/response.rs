@@ -10,6 +10,9 @@ pub struct ResponseData {
     pub headers: Vec<KeyValuePair>,
     pub cookies: Vec<CookieData>,
     pub body: String,
+    /// Exact bytes for binary/non-UTF8 responses, bounded by the HTTP receive cap.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub body_base64: Option<String>,
     /// Response time in milliseconds
     pub time_ms: u64,
     /// Response size in bytes

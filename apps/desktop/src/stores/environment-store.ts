@@ -62,7 +62,7 @@ export const useEnvironmentStore = create<EnvironmentState>((set, get) => ({
       try {
         const rootVars = await loadRootDotenv(activeCollectionPath);
         return { ...rootVars, ...runtimeOverrides };
-      } catch (err) {
+      } catch {
         import("@/stores/toast-store").then(({ useToastStore }) =>
           useToastStore.getState().showWarning("Could not load .env file"),
         );

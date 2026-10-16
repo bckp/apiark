@@ -41,6 +41,7 @@ pub async fn send_request(
         headers: result.headers,
         cookies: result.cookies,
         body: result.body,
+        body_base64: result.body_base64,
         time_ms: result.time_ms,
         size_bytes: result.size_bytes,
         truncated: result.truncated,

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import type { CollectionNode, CollectionDefaults, HttpMethod } from "@apiark/types";
+import type {
+  CollectionNode,
+  CollectionDefaults,
+  HttpMethod,
+} from "@apiark/types";
 import { useCollectionStore } from "@/stores/collection-store";
 import { useTabStore } from "@/stores/tab-store";
 import {
@@ -19,7 +23,10 @@ import {
   X,
   FolderX,
 } from "lucide-react";
-import { getCollectionDefaults, updateCollectionDefaults } from "@/lib/tauri-api";
+import {
+  getCollectionDefaults,
+  updateCollectionDefaults,
+} from "@/lib/tauri-api";
 import * as Dialog from "@radix-ui/react-dialog";
 import { CookieJarDialog } from "@/components/collection/cookie-jar-dialog";
 import { exportCollectionToFile } from "@/lib/export-collection";
@@ -218,7 +225,8 @@ export function CollectionTree({
 
       // Get all siblings at the same parent
       const siblings = flatNodes.filter(
-        (f) => f.parentDir === activeFlat.parentDir && f.depth === activeFlat.depth,
+        (f) =>
+          f.parentDir === activeFlat.parentDir && f.depth === activeFlat.depth,
       );
 
       const fromIdx = siblings.findIndex((f) => f.node.path === active.id);
@@ -257,7 +265,10 @@ export function CollectionTree({
         strategy={verticalListSortingStrategy}
       >
         {needsOwnScroll ? (
-          <div ref={internalParentRef} style={{ overflow: "auto", maxHeight: "100%" }}>
+          <div
+            ref={internalParentRef}
+            style={{ overflow: "auto", maxHeight: "100%" }}
+          >
             <div
               style={{
                 height: `${virtualizer.getTotalSize()}px`,
@@ -318,7 +329,13 @@ export function CollectionTree({
 
 // ── Virtual row wrapper with DnD ──
 
-function VirtualRow({ flat, style }: { flat: FlatNode; style: React.CSSProperties }) {
+function VirtualRow({
+  flat,
+  style,
+}: {
+  flat: FlatNode;
+  style: React.CSSProperties;
+}) {
   const {
     attributes,
     listeners,
@@ -330,7 +347,7 @@ function VirtualRow({ flat, style }: { flat: FlatNode; style: React.CSSPropertie
 
   const dndStyle: React.CSSProperties = {
     ...style,
-    transform: CSS.Transform.toString(transform) || style.transform as string,
+    transform: CSS.Transform.toString(transform) || (style.transform as string),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
@@ -356,13 +373,24 @@ function TreeNodeRow({
 }) {
   const { t } = useTranslation();
   const { node, depth, collectionPath, collectionName } = flat;
-  const { expandedPaths, toggleExpand, createRequest, createFolder, deleteItem, renameItem } =
-    useCollectionStore();
+  const {
+    expandedPaths,
+    toggleExpand,
+    createRequest,
+    createFolder,
+    deleteItem,
+    renameItem,
+  } = useCollectionStore();
   const { openTab } = useTabStore();
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
-  const [cookieSettingsPath, setCookieSettingsPath] = useState<string | null>(null);
+  const [cookieSettingsPath, setCookieSettingsPath] = useState<string | null>(
+    null,
+  );
   const [cookieJarPath, setCookieJarPath] = useState<string | null>(null);
   const [newRequestDialog, setNewRequestDialog] = useState(false);
   const [newFolderDialog, setNewFolderDialog] = useState(false);
@@ -393,49 +421,12 @@ function TreeNodeRow({
     setNewRequestDialog(true);
   };
 
-  const handleCreateRequest = async (name: string, protocol?: Protocol) => {
+  const handleCreateRequest = async (name: string) => {
     const dir = node.type === "request" ? collectionPath : node.path;
     const filename = name.toLowerCase().replace(/\s+/g, "-");
     try {
       const path = await createRequest(dir, filename, name, collectionPath);
       await openTab(path, collectionPath);
-      // For non-HTTP protocols, update the tab after opening then save to disk
-      if (protocol && protocol !== "http") {
-        const tabStore = useTabStore.getState();
-        const tab = tabStore.tabs.find((t) => t.filePath === path);
-        if (tab) {
-          const patch: Record<string, unknown> = { protocol };
-          if (protocol === "graphql") {
-            patch.method = "POST";
-            patch.graphql = { query: "", variables: "{}", operationName: "", schemaJson: null };
-          } else if (protocol === "websocket") {
-            patch.url = "ws://localhost:8080";
-          } else if (protocol === "sse") {
-            patch.url = "";
-          } else if (protocol === "grpc") {
-            patch.url = "http://localhost:50051";
-            patch.grpc = {
-              services: [],
-              selectedService: null,
-              selectedMethod: null,
-              requestJson: "{}",
-              metadata: [{ id: `kv_${Date.now()}`, key: "", value: "", enabled: true }],
-              loading: false,
-              response: null,
-              error: null,
-            };
-          }
-          useTabStore.setState((state) => ({
-            tabs: state.tabs.map((t) =>
-              t.id === tab.id ? { ...t, ...patch } : t,
-            ),
-          }));
-          // Save to disk so the sidebar reflects the correct protocol
-          await useTabStore.getState().save();
-          // Refresh sidebar
-          await useCollectionStore.getState().refreshCollection(collectionPath);
-        }
-      }
     } catch (err) {
       import("@/stores/toast-store").then(({ useToastStore }) =>
         useToastStore.getState().showError(`Failed to create request: ${err}`),
@@ -476,10 +467,14 @@ function TreeNodeRow({
 
   const confirmDeleteCollection = async () => {
     try {
-      await useCollectionStore.getState().deleteCollection(node.path, collectionName);
+      await useCollectionStore
+        .getState()
+        .deleteCollection(node.path, collectionName);
     } catch (err) {
       import("@/stores/toast-store").then(({ useToastStore }) =>
-        useToastStore.getState().showError(`Failed to delete collection: ${err}`),
+        useToastStore
+          .getState()
+          .showError(`Failed to delete collection: ${err}`),
       );
     }
   };
@@ -517,19 +512,9 @@ function TreeNodeRow({
             <GripVertical className="h-3 w-3 text-[var(--color-text-muted)]" />
           </span>
           <span
-            className={`w-9 shrink-0 text-[10px] font-bold ${
-              node.protocol === "graphql" || node.isGraphql ? "text-violet-400"
-              : node.protocol === "websocket" ? "text-cyan-400"
-              : node.protocol === "sse" ? "text-orange-400"
-              : node.protocol === "grpc" ? "text-green-400"
-              : METHOD_COLORS[node.method]
-            }`}
+            className={`w-9 shrink-0 text-[10px] font-bold ${METHOD_COLORS[node.method]}`}
           >
-            {node.protocol === "graphql" || node.isGraphql ? "GQL"
-              : node.protocol === "websocket" ? "WS"
-              : node.protocol === "sse" ? "SSE"
-              : node.protocol === "grpc" ? "gRPC"
-              : node.method}
+            {node.method}
           </span>
           {renaming ? (
             <input
@@ -553,27 +538,27 @@ function TreeNodeRow({
               </span>
               {/* Action buttons — visible on hover */}
               <span className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRename();
-              }}
-              className="rounded p-0.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)]"
-              title={t("common.rename")}
-            >
-              <Pencil className="h-3 w-3" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete();
-              }}
-              className="rounded p-0.5 text-[var(--color-text-muted)] hover:bg-red-500/20 hover:text-red-400"
-              title={t("common.delete")}
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRename();
+                  }}
+                  className="rounded p-0.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)]"
+                  title={t("common.rename")}
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete();
+                  }}
+                  className="rounded p-0.5 text-[var(--color-text-muted)] hover:bg-red-500/20 hover:text-red-400"
+                  title={t("common.delete")}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </span>
             </>
           )}
         </div>
@@ -583,8 +568,17 @@ function TreeNodeRow({
             y={contextMenu.y}
             onClose={closeContextMenu}
             items={[
-              { label: t("common.rename"), icon: Pencil, onClick: handleRename },
-              { label: t("common.delete"), icon: Trash2, onClick: handleDelete, danger: true },
+              {
+                label: t("common.rename"),
+                icon: Pencil,
+                onClick: handleRename,
+              },
+              {
+                label: t("common.delete"),
+                icon: Trash2,
+                onClick: handleDelete,
+                danger: true,
+              },
             ]}
           />
         )}
@@ -606,7 +600,9 @@ function TreeNodeRow({
         role="button"
         tabIndex={0}
         onClick={() => toggleExpand(node.path)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") toggleExpand(node.path); }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") toggleExpand(node.path);
+        }}
         onContextMenu={handleContextMenu}
         className="group flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-left text-sm hover:bg-[var(--color-elevated)]"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
@@ -644,7 +640,9 @@ function TreeNodeRow({
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className="flex-1 truncate text-[var(--color-text-primary)]">{node.name}</span>
+          <span className="flex-1 truncate text-[var(--color-text-primary)]">
+            {node.name}
+          </span>
         )}
         {/* Action buttons — visible on hover */}
         {!renaming && (
@@ -652,14 +650,20 @@ function TreeNodeRow({
             {node.type === "folder" && (
               <>
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleRename(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRename();
+                  }}
                   className="rounded p-0.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)]"
                   title={t("common.rename")}
                 >
                   <Pencil className="h-3 w-3" />
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete();
+                  }}
                   className="rounded p-0.5 text-[var(--color-text-muted)] hover:bg-red-500/20 hover:text-red-400"
                   title={t("common.delete")}
                 >
@@ -670,14 +674,20 @@ function TreeNodeRow({
             {node.type === "collection" && (
               <>
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleRename(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRename();
+                  }}
                   className="rounded p-0.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)]"
                   title={t("common.rename")}
                 >
                   <Pencil className="h-3 w-3" />
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete();
+                  }}
                   className="rounded p-0.5 text-[var(--color-text-muted)] hover:bg-red-500/20 hover:text-red-400"
                   title={t("common.delete")}
                 >
@@ -686,7 +696,9 @@ function TreeNodeRow({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    useCollectionStore.getState().closeCollection(collectionPath);
+                    useCollectionStore
+                      .getState()
+                      .closeCollection(collectionPath);
                   }}
                   className="rounded p-0.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)]"
                   title={t("sidebar.closeCollection")}
@@ -705,8 +717,16 @@ function TreeNodeRow({
           y={contextMenu.y}
           onClose={closeContextMenu}
           items={[
-            { label: t("sidebar.newRequest"), icon: FilePlus, onClick: handleNewRequest },
-            { label: t("sidebar.newFolder"), icon: FolderPlus, onClick: handleNewFolder },
+            {
+              label: t("sidebar.newRequest"),
+              icon: FilePlus,
+              onClick: handleNewRequest,
+            },
+            {
+              label: t("sidebar.newFolder"),
+              icon: FolderPlus,
+              onClick: handleNewFolder,
+            },
             ...(node.type === "collection"
               ? [
                   {
@@ -714,9 +734,16 @@ function TreeNodeRow({
                     icon: Download,
                     onClick: () => {
                       closeContextMenu();
-                      exportCollectionToFile(node.path, node.name, "postman").catch((err: unknown) =>
-                        import("@/stores/toast-store").then(({ useToastStore }) =>
-                          useToastStore.getState().showError(`Export failed: ${err}`),
+                      exportCollectionToFile(
+                        node.path,
+                        node.name,
+                        "postman",
+                      ).catch((err: unknown) =>
+                        import("@/stores/toast-store").then(
+                          ({ useToastStore }) =>
+                            useToastStore
+                              .getState()
+                              .showError(`Export failed: ${err}`),
                         ),
                       );
                     },
@@ -734,7 +761,9 @@ function TreeNodeRow({
                     icon: FolderX,
                     onClick: () => {
                       closeContextMenu();
-                      useCollectionStore.getState().closeCollection(collectionPath);
+                      useCollectionStore
+                        .getState()
+                        .closeCollection(collectionPath);
                     },
                   },
                   {
@@ -748,8 +777,17 @@ function TreeNodeRow({
                   },
                 ]
               : [
-                  { label: t("common.rename"), icon: Pencil, onClick: handleRename },
-                  { label: t("common.delete"), icon: Trash2, onClick: handleDelete, danger: true },
+                  {
+                    label: t("common.rename"),
+                    icon: Pencil,
+                    onClick: handleRename,
+                  },
+                  {
+                    label: t("common.delete"),
+                    icon: Trash2,
+                    onClick: handleDelete,
+                    danger: true,
+                  },
                 ]),
           ]}
         />
@@ -763,7 +801,9 @@ function TreeNodeRow({
       {cookieJarPath && (
         <CookieJarDialog
           open={!!cookieJarPath}
-          onOpenChange={(open) => { if (!open) setCookieJarPath(null); }}
+          onOpenChange={(open) => {
+            if (!open) setCookieJarPath(null);
+          }}
           collectionPath={cookieJarPath}
           collectionName={collectionName}
         />
@@ -773,7 +813,6 @@ function TreeNodeRow({
         onOpenChange={setNewRequestDialog}
         title={t("sidebar.newRequest")}
         placeholder={t("sidebar.requestNamePlaceholder", "Request name")}
-        showProtocol
         onSubmit={handleCreateRequest}
       />
       <InputDialog
@@ -816,10 +855,15 @@ function CookieSettingsDialog({
 
   useEffect(() => {
     getCollectionDefaults(collectionPath)
-      .then((d) => { setDefaults(d); setLoading(false); })
+      .then((d) => {
+        setDefaults(d);
+        setLoading(false);
+      })
       .catch((e) => {
         import("@/stores/toast-store").then(({ useToastStore }) =>
-          useToastStore.getState().showError(`Failed to load collection defaults: ${e}`),
+          useToastStore
+            .getState()
+            .showError(`Failed to load collection defaults: ${e}`),
         );
         setLoading(false);
       });
@@ -833,7 +877,9 @@ function CookieSettingsDialog({
       await updateCollectionDefaults(collectionPath, updated);
     } catch (e) {
       import("@/stores/toast-store").then(({ useToastStore }) =>
-        useToastStore.getState().showError(`Failed to update collection defaults: ${e}`),
+        useToastStore
+          .getState()
+          .showError(`Failed to update collection defaults: ${e}`),
       );
     }
   };
@@ -853,7 +899,9 @@ function CookieSettingsDialog({
           </div>
           <div className="space-y-3 p-5">
             {loading ? (
-              <p className="text-sm text-[var(--color-text-muted)]">{t("common.loading")}</p>
+              <p className="text-sm text-[var(--color-text-muted)]">
+                {t("common.loading")}
+              </p>
             ) : defaults ? (
               <>
                 <ToggleRow
@@ -876,7 +924,9 @@ function CookieSettingsDialog({
                 />
               </>
             ) : (
-              <p className="text-sm text-[var(--color-text-muted)]">Failed to load settings.</p>
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Failed to load settings.
+              </p>
             )}
           </div>
         </Dialog.Content>
@@ -900,7 +950,9 @@ function ToggleRow({
     <div className="flex items-center justify-between">
       <div>
         <div className="text-sm text-[var(--color-text-primary)]">{label}</div>
-        <div className="text-xs text-[var(--color-text-muted)]">{description}</div>
+        <div className="text-xs text-[var(--color-text-muted)]">
+          {description}
+        </div>
       </div>
       <button
         role="switch"
@@ -922,38 +974,32 @@ function ToggleRow({
 
 // ── Input dialog (replaces browser prompt()) ──
 
-type Protocol = "http" | "graphql" | "websocket" | "sse" | "grpc";
-
 function InputDialog({
   open,
   onOpenChange,
   title,
   placeholder,
-  showProtocol,
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   placeholder: string;
-  showProtocol?: boolean;
-  onSubmit: (value: string, protocol?: Protocol) => void;
+  onSubmit: (value: string) => void;
 }) {
   const [value, setValue] = useState("");
-  const [protocol, setProtocol] = useState<Protocol>("http");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setValue("");
-      setProtocol("http");
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
 
   const handleSubmit = () => {
     if (!value.trim()) return;
-    onSubmit(value.trim(), showProtocol ? protocol : undefined);
+    onSubmit(value.trim());
     onOpenChange(false);
   };
 
@@ -977,31 +1023,6 @@ function InputDialog({
             placeholder={placeholder}
             className="mb-3 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none transition-colors focus:border-[var(--color-accent)]/50"
           />
-          {showProtocol && (
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              {(
-                [
-                  { value: "http", label: "HTTP", color: "bg-emerald-500/15 text-emerald-400" },
-                  { value: "graphql", label: "GraphQL", color: "bg-violet-500/15 text-violet-400" },
-                  { value: "websocket", label: "WebSocket", color: "bg-cyan-500/15 text-cyan-400" },
-                  { value: "sse", label: "SSE", color: "bg-orange-500/15 text-orange-400" },
-                  { value: "grpc", label: "gRPC", color: "bg-green-500/15 text-green-400" },
-                ] as const
-              ).map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => setProtocol(p.value)}
-                  className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
-                    protocol === p.value
-                      ? `${p.color} ring-1 ring-current`
-                      : "bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          )}
           <div className="flex justify-end gap-2">
             <button
               onClick={() => onOpenChange(false)}
@@ -1048,7 +1069,9 @@ function ConfirmDialog({
           <Dialog.Title className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">
             {title}
           </Dialog.Title>
-          <p className="mb-5 text-sm text-[var(--color-text-secondary)]">{message}</p>
+          <p className="mb-5 text-sm text-[var(--color-text-secondary)]">
+            {message}
+          </p>
           <div className="flex justify-end gap-2">
             <button
               onClick={() => onOpenChange(false)}
@@ -1096,8 +1119,12 @@ function ContextMenu({
   useEffect(() => {
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
-      const newLeft = rect.right > window.innerWidth ? Math.max(0, x - rect.width) : x;
-      const newTop = rect.bottom > window.innerHeight ? Math.max(0, window.innerHeight - rect.height) : y;
+      const newLeft =
+        rect.right > window.innerWidth ? Math.max(0, x - rect.width) : x;
+      const newTop =
+        rect.bottom > window.innerHeight
+          ? Math.max(0, window.innerHeight - rect.height)
+          : y;
       setPosition({ left: newLeft, top: newTop });
     }
   }, [x, y]);

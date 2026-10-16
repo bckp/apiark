@@ -41,10 +41,6 @@
     "location": "Localização",
     "creating": "Criando...",
     "exportPostman": "Exportar como Postman",
-    "exportOpenapi": "Exportar como OpenAPI",
-    "exportApiark": "Exportar como ApiArk ZIP",
-    "startMockServer": "Iniciar Servidor Mock",
-    "generateDocs": "Gerar Documentação",
     "requestName": "Nome da requisição:",
     "folderName": "Nome da pasta:",
     "openCollectionFirst": "Abra uma coleção primeiro para gerenciar ambientes",
@@ -250,17 +246,7 @@
     "exportState": "Exportar Estado da App",
     "importState": "Importar Estado da App",
     "exporting": "Exportando...",
-    "importing": "Importando...",
-    "updates": "Atualizações",
-    "updateChannel": "Canal de Atualização",
-    "stable": "Estável",
-    "beta": "Beta",
-    "nightly": "Nightly",
-    "checkForUpdates": "Verificar Atualizações",
-    "upToDate": "Você está atualizado",
-    "updateAvailable": "Atualização disponível: {{version}}",
-    "shortcuts": "Atalhos de Teclado",
-    "recording": "Pressione a combinação de teclas..."
+    "importing": "Importando..."
   },
   "runner": {
     "title": "Executor de Coleção",
@@ -289,11 +275,6 @@
     "warnings": "{{count}} avisos",
     "source": "Origem",
     "postman": "Postman v2.1",
-    "insomnia": "Insomnia v4",
-    "bruno": "Bruno",
-    "openapi": "OpenAPI 3.x",
-    "hoppscotch": "Hoppscotch",
-    "har": "HAR (HTTP Archive)",
     "next": "Próximo",
     "back": "Voltar",
     "done": "Concluído",
@@ -303,38 +284,7 @@
   "export": {
     "title": "Exportar Coleção",
     "format": "Formato",
-    "postman": "Postman v2.1",
-    "openapi": "OpenAPI 3.0",
-    "apiark": "ApiArk YAML"
-  },
-  "commandPalette": {
-    "title": "Paleta de Comandos",
-    "placeholder": "Digite um comando...",
-    "noResults": "Nenhum comando encontrado",
-    "general": "Geral",
-    "view": "Visualização",
-    "tabs": "Abas",
-    "requests": "Requisições",
-    "environments": "Ambientes",
-    "newHttpRequest": "Nova Requisição HTTP",
-    "newGraphqlRequest": "Nova Requisição GraphQL",
-    "newWebsocket": "Nova Conexão WebSocket",
-    "newSse": "Nova Conexão SSE",
-    "newGrpc": "Nova Requisição gRPC",
-    "openSettings": "Configurações",
-    "importCurl": "Importar cURL",
-    "importCollection": "Importar Coleção",
-    "compareResponses": "Comparar Respostas",
-    "mockServers": "Servidores Mock",
-    "scheduledMonitors": "Monitores Agendados",
-    "generateDocs": "Gerar Documentação API",
-    "runCollection": "Executar Coleção",
-    "toggleZenMode": "Alternar Modo Zen",
-    "toggleTerminal": "Alternar Terminal",
-    "toggleConsole": "Alternar Console",
-    "switchTo": "Mudar para",
-    "navigate": "Navegar com as teclas de seta",
-    "enterToSelect": "Enter para selecionar"
+    "postman": "Postman v2.1"
   },
   "common": {
     "save": "Salvar",
@@ -378,17 +328,6 @@
     "failedToImport": "Falha ao importar: {{reason}}",
     "failedToExport": "Falha ao exportar: {{reason}}"
   },
-  "onboarding": {
-    "welcome": "Bem-vindo ao ApiArk",
-    "tagline": "Desenvolvimento de API local-first. Sem contas. Sem nuvem. Apenas velocidade.",
-    "startScratch": "Começar do zero",
-    "startScratchDesc": "Crie uma coleção de exemplo com requisições de amostra",
-    "importExisting": "Importar coleção existente",
-    "importExistingDesc": "De Postman, Insomnia, Bruno ou OpenAPI",
-    "openFolder": "Abrir uma pasta",
-    "openFolderDesc": "Abra um diretório com uma coleção ApiArk existente",
-    "chooseTheme": "Escolha seu tema"
-  },
   "console": {
     "title": "Console",
     "terminal": "Terminal",
@@ -401,111 +340,10 @@
     "warn": "warn",
     "noLogs": "Sem saída do console"
   },
-  "grpc": {
-    "title": "gRPC",
-    "loadProto": "Carregar .proto",
-    "service": "Serviço",
-    "method": "Método",
-    "invoke": "Invocar",
-    "metadata": "Metadados",
-    "requestBody": "Corpo da Requisição (JSON)",
-    "responseBody": "Resposta",
-    "loadProtoToStart": "Carregue um arquivo .proto para começar",
-    "selectMethodToSend": "Selecione um método e envie uma requisição"
-  },
-  "graphql": {
-    "query": "Consulta GraphQL",
-    "variables": "Variáveis",
-    "variablesJson": "Variáveis (JSON)",
-    "operationName": "Nome da Operação (opcional)",
-    "fetchSchema": "Buscar Esquema (Introspection)",
-    "fetchingSchema": "Buscando...",
-    "schema": "Esquema",
-    "schemaTypes": "Tipos do Esquema"
-  },
-  "mock": {
-    "title": "Servidores Mock",
-    "start": "Iniciar Servidor Mock",
-    "stop": "Parar",
-    "stopServer": "Parar servidor",
-    "port": "Porta",
-    "latency": "Latência (ms)",
-    "errorRate": "% de Erro",
-    "running": "Em execução",
-    "stopped": "Parado",
-    "collection": "Coleção",
-    "starting": "Iniciando...",
-    "noServers": "Nenhum servidor mock em execução",
-    "endpoints": "Endpoints",
-    "endpoint": "endpoint",
-    "requestLog": "Registro de Requisições",
-    "clearLogs": "Limpar registros",
-    "waitingForRequests": "Aguardando requisições em localhost:",
-    "selectServer": "Selecione um servidor para ver detalhes",
-    "createDesc": "Crie servidores mock locais a partir das suas coleções",
-    "newMockServer": "Novo Servidor Mock"
-  },
-  "monitor": {
-    "title": "Monitores",
-    "create": "Criar Monitor",
-    "schedule": "Agendamento",
-    "lastRun": "Última Execução",
-    "nextRun": "Próxima Execução",
-    "enabled": "Habilitado",
-    "disabled": "Desabilitado",
-    "createDesc": "Agende execuções automatizadas de coleções",
-    "newMonitor": "Novo Monitor"
-  },
-  "docs": {
-    "title": "Documentação API",
-    "generate": "Gerar",
-    "generateDocs": "Gerar Documentação",
-    "preview": "Pré-visualização",
-    "html": "HTML",
-    "markdown": "Markdown",
-    "generating": "Gerando documentação...",
-    "generateDesc": "Gere documentação a partir de coleções"
-  },
   "diff": {
     "title": "Diff de Resposta",
     "snapshot": "Snapshot",
     "compare": "Comparar"
-  },
-  "trash": {
-    "title": "Lixeira",
-    "restore": "Restaurar",
-    "emptyTrash": "Esvaziar Lixeira",
-    "deletedAt": "Excluído em {{date}}"
-  },
-  "migration": {
-    "title": "Atualização de Formato da Coleção",
-    "newerFormat": "Formato de Coleção Mais Recente",
-    "message": "Esta coleção usa o formato v{{old}}. A versão atual é v{{new}}.",
-    "upgrade": "Atualizar",
-    "readOnly": "Abrir Somente Leitura",
-    "upgradeHint": "A atualização reescreverá os arquivos da coleção. Faça commit das suas alterações primeiro."
-  },
-  "websocket": {
-    "connect": "Conectar",
-    "disconnect": "Desconectar",
-    "send": "Enviar",
-    "connected": "Conectado",
-    "disconnected": "Desconectado",
-    "messages": "Mensagens",
-    "connectToStart": "Conecte-se para iniciar o streaming"
-  },
-  "sse": {
-    "connect": "Conectar",
-    "disconnect": "Desconectar",
-    "events": "Eventos",
-    "connected": "Conectado",
-    "disconnected": "Desconectado",
-    "connectToStart": "Conecte-se para iniciar o streaming"
-  },
-  "ai": {
-    "title": "Assistente IA",
-    "comingSoon": "AI Assistant",
-    "comingSoonDesc": "Generate API requests from natural language and auto-generate tests from responses. Configure your AI provider in Settings."
   },
   "cookies": {
     "title": "Pote de Cookies",
@@ -526,31 +364,9 @@
     "persistCookies": "Persistir Cookies",
     "persistCookiesDesc": "Salvar cookies no disco entre reinicializações da app"
   },
-  "tour": {
-    "skip": "Pular tour",
-    "back": "Voltar",
-    "next": "Próximo",
-    "getStarted": "Começar",
-    "of": "de",
-    "collectionsSidebar": "Barra Lateral de Coleções",
-    "environmentSelector": "Seletor de Ambiente",
-    "requestTabs": "Abas de Requisições",
-    "urlBar": "Barra de URL",
-    "queryParameters": "Parâmetros de Consulta",
-    "requestHeaders": "Cabeçalhos",
-    "requestBody": "Corpo da Requisição",
-    "authentication": "Autenticação",
-    "scripts": "Scripts",
-    "testsAssertions": "Testes e Asserções",
-    "responseViewer": "Visualizador de Resposta",
-    "sendFirstRequest": "Envie Sua Primeira Requisição!"
-  },
   "confirmDelete": {
     "title": "Confirmar Exclusão",
     "request": "Excluir \"{{name}}\"?",
     "collection": "Excluir a coleção \"{{name}}\"? Isso moverá toda a coleção para a lixeira."
-  },
-  "audit": {
-    "title": "Logs de Auditoria"
   }
 }

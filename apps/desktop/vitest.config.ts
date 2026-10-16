@@ -19,14 +19,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
-      "@tauri-apps/api": path.resolve(__dirname, "src/__tests__/mocks/tauri-api.ts"),
-      "@tauri-apps/api/core": path.resolve(__dirname, "src/__tests__/mocks/tauri-api.ts"),
-      "@tauri-apps/api/event": path.resolve(__dirname, "src/__tests__/mocks/tauri-api.ts"),
-      "@tauri-apps/plugin-dialog": path.resolve(__dirname, "src/__tests__/mocks/tauri-plugins.ts"),
-      "@tauri-apps/plugin-fs": path.resolve(__dirname, "src/__tests__/mocks/tauri-plugins.ts"),
-      "@tauri-apps/plugin-shell": path.resolve(__dirname, "src/__tests__/mocks/tauri-plugins.ts"),
-      "@tauri-apps/plugin-notification": path.resolve(__dirname, "src/__tests__/mocks/tauri-plugins.ts"),
-      "@tauri-apps/plugin-updater": path.resolve(__dirname, "src/__tests__/mocks/tauri-plugins.ts"),
     },
   },
 });

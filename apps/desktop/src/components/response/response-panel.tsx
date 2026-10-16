@@ -1,20 +1,35 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useActiveTab } from "@/stores/tab-store";
-import { AlertCircle, ClipboardCopy, Download, Check, ArrowLeftRight, BookmarkPlus } from "lucide-react";
+import {
+  AlertCircle,
+  ClipboardCopy,
+  Download,
+  Check,
+  ArrowLeftRight,
+  BookmarkPlus,
+} from "lucide-react";
 import { useDiffStore } from "@/stores/diff-store";
 import { EmptyState, RocketIcon } from "@/components/ui/empty-state";
 import { ResponseSkeleton } from "@/components/ui/skeleton";
 import { CodeGenerationPanel } from "./code-generation-panel";
 import { TestResultsPanel } from "./test-results-panel";
 import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { writeTextFile, writeFile } from "@tauri-apps/plugin-fs";
 import type { ConsoleEntry } from "@apiark/types";
 import { TimingPanel } from "./timing-panel";
 import { CodeEditor } from "@/components/ui/code-editor";
 import type { KeyValuePair } from "@apiark/types";
 
-type ResponseTab = "visualizations" | "body" | "headers" | "cookies" | "tests" | "timing" | "console" | "code";
+type ResponseTab =
+  | "visualizations"
+  | "body"
+  | "headers"
+  | "cookies"
+  | "tests"
+  | "timing"
+  | "console"
+  | "code";
 
 function statusColor(status: number): string {
   if (status < 200) return "text-blue-400";
@@ -38,17 +53,20 @@ export function ResponsePanel() {
   const testResults = tab?.testResults ?? [];
   const assertionResults = tab?.assertionResults ?? [];
 
-  const failedCount = useMemo(
-    () => (testResults.filter((t) => !t.passed).length) +
-      (assertionResults.filter((a) => !a.passed).length),
-    [testResults, assertionResults],
-  );
+  const failedCount =
+    testResults.filter((t) => !t.passed).length +
+    assertionResults.filter((a) => !a.passed).length;
 
-  const language=useMemo(()=>getLanguageFromHeaders(tab?.response?.headers??[]),[tab?.response?.headers]);
-  const formattedBody=useMemo(()=>{
-    const body=tab?.response?.body??"";
-    return activeTab==="body"&&body.length<=1024*1024?tryFormatBody(body,language):body;
-  },[tab?.response?.body,language,activeTab]);
+  const language = useMemo(
+    () => getLanguageFromHeaders(tab?.response?.headers ?? []),
+    [tab?.response?.headers],
+  );
+  const formattedBody = useMemo(() => {
+    const body = tab?.response?.body ?? "";
+    return activeTab === "body" && body.length <= 1024 * 1024
+      ? tryFormatBody(body, language)
+      : body;
+  }, [tab?.response?.body, language, activeTab]);
   if (!tab) return null;
 
   const { response, error, loading, consoleOutput } = tab;
@@ -76,12 +94,17 @@ export function ResponsePanel() {
           failedCount={failedCount}
           consoleCount={consoleOutput.length}
         />
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" role="alert">
+        <div
+          className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center"
+          role="alert"
+        >
           <AlertCircle className="h-10 w-10 text-red-500" aria-hidden="true" />
           <div>
             <p className="text-sm font-medium text-red-400">{error.message}</p>
             {error.suggestion && (
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">{error.suggestion}</p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                {error.suggestion}
+              </p>
             )}
           </div>
         </div>
@@ -103,11 +126,20 @@ export function ResponsePanel() {
 
       {/* Status bar — below tabs, always visible when response exists */}
       {response && (
-        <div className="flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5" role="status" aria-live="polite">
-          <span className={`text-sm font-semibold animate-status-pulse ${statusColor(response.status)}`} aria-label={`Response: ${response.status} ${response.statusText}, ${response.status < 300 ? "success" : response.status < 400 ? "redirect" : response.status < 500 ? "client error" : "server error"}`}>
+        <div
+          className="flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5"
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            className={`text-sm font-semibold animate-status-pulse ${statusColor(response.status)}`}
+            aria-label={`Response: ${response.status} ${response.statusText}, ${response.status < 300 ? "success" : response.status < 400 ? "redirect" : response.status < 500 ? "client error" : "server error"}`}
+          >
             {response.status} {response.statusText}
           </span>
-          <span className="text-xs text-[var(--color-text-muted)]">{response.timeMs}ms</span>
+          <span className="text-xs text-[var(--color-text-muted)]">
+            {response.timeMs}ms
+          </span>
           <span className="text-xs text-[var(--color-text-muted)]">
             {formatSize(response.sizeBytes)}
           </span>
@@ -115,13 +147,16 @@ export function ResponsePanel() {
       )}
 
       {/* Empty state */}
-      {!response && activeTab !== "code" && activeTab !== "tests" && activeTab !== "console" && (
-        <EmptyState
-          icon={<RocketIcon />}
-          title={t("response.noResponse")}
-          description="Use Ctrl+Enter to send quickly"
-        />
-      )}
+      {!response &&
+        activeTab !== "code" &&
+        activeTab !== "tests" &&
+        activeTab !== "console" && (
+          <EmptyState
+            icon={<RocketIcon />}
+            title={t("response.noResponse")}
+            description="Use Ctrl+Enter to send quickly"
+          />
+        )}
 
       {/* Content */}
       {activeTab === "code" && <CodeGenerationPanel />}
@@ -142,90 +177,138 @@ export function ResponsePanel() {
       )}
 
       {response && (
-        <div className={`flex-1 animate-fade-in ${activeTab === "body" ? "flex min-h-0 flex-col p-3 pb-0" : "overflow-auto p-3"}`}>
-        {activeTab === "body" && (() => {
-          return (
-            <>
-              <ResponseBodyActions body={formattedBody} />
-              <div className="min-h-0 flex-1">
-                <CodeEditor
-                  value={formattedBody}
-                  onChange={() => {}}
-                  language={language}
-                  height="100%"
-                  readOnly
-                  lineNumbers={false}
-                  minimap={false}
-                />
-              </div>
-            </>
-          );
-        })()}
+        <div
+          className={`flex-1 animate-fade-in ${activeTab === "body" ? "flex min-h-0 flex-col p-3 pb-0" : "overflow-auto p-3"}`}
+        >
+          {activeTab === "body" &&
+            (() => {
+              return (
+                <>
+                  <ResponseBodyActions
+                    body={formattedBody}
+                    bodyBase64={response.bodyBase64}
+                  />
+                  <div className="min-h-0 flex-1">
+                    <CodeEditor
+                      value={formattedBody}
+                      onChange={() => {}}
+                      language={language}
+                      height="100%"
+                      readOnly
+                      lineNumbers={false}
+                      minimap={false}
+                    />
+                  </div>
+                </>
+              );
+            })()}
 
-        {activeTab === "headers" && (
-          <table className="w-full text-sm">
-            <tbody>
-              {response.headers.map((h, i) => (
-                <tr key={i} className="border-b border-[var(--color-elevated)]">
-                  <td className="py-1 pr-4 font-medium text-[var(--color-text-secondary)]">
-                    {h.key}
-                  </td>
-                  <td className="py-1 text-[var(--color-text-primary)]">{h.value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        {activeTab === "cookies" && (
-          <>
-            {response.cookies.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-dimmed)]">No cookies</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-[var(--color-text-muted)]">
-                    <th className="pb-1 pr-4">Name</th>
-                    <th className="pb-1 pr-4">Value</th>
-                    <th className="pb-1 pr-4">Domain</th>
-                    <th className="pb-1">Path</th>
+          {activeTab === "headers" && (
+            <table className="w-full text-sm">
+              <tbody>
+                {response.headers.map((h, i) => (
+                  <tr
+                    key={i}
+                    className="border-b border-[var(--color-elevated)]"
+                  >
+                    <td className="py-1 pr-4 font-medium text-[var(--color-text-secondary)]">
+                      {h.key}
+                    </td>
+                    <td className="py-1 text-[var(--color-text-primary)]">
+                      {h.value}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {response.cookies.map((c, i) => (
-                    <tr key={i} className="border-b border-[var(--color-elevated)]">
-                      <td className="py-1 pr-4 font-medium text-[var(--color-text-secondary)]">
-                        {c.name}
-                      </td>
-                      <td className="py-1 pr-4 text-[var(--color-text-primary)]">{c.value}</td>
-                      <td className="py-1 pr-4 text-[var(--color-text-muted)]">
-                        {c.domain ?? "—"}
-                      </td>
-                      <td className="py-1 text-[var(--color-text-muted)]">{c.path ?? "/"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </>
-        )}
+                ))}
+              </tbody>
+            </table>
+          )}
 
-        {activeTab === "visualizations" && <div className="space-y-4">
-          {(response.visualizations ?? []).length === 0 && <p>No visualizations for this run. Use ark.visualize in a post-response script.</p>}
-          {(response.visualizations ?? []).map((output, index) => <section key={`${tab.id}-${index}`}>
-            <h3 className="mb-2 text-sm font-medium">{output.name}</h3>
-            {output.type === "image" ? <img src={`data:${output.mimeType};base64,${output.data}`} alt={output.name} width={output.width} height={output.height} className="max-h-[70vh] max-w-full object-contain" />
-              : <pre className="whitespace-pre-wrap break-words text-sm">{output.type === "text" ? output.data : JSON.stringify(output.data, null, 2)}</pre>}
-          </section>)}
-        </div>}
-        {activeTab === "timing" && <TimingPanel response={response} />}
-      </div>
+          {activeTab === "cookies" && (
+            <>
+              {response.cookies.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-dimmed)]">
+                  No cookies
+                </p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-[var(--color-text-muted)]">
+                      <th className="pb-1 pr-4">Name</th>
+                      <th className="pb-1 pr-4">Value</th>
+                      <th className="pb-1 pr-4">Domain</th>
+                      <th className="pb-1">Path</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {response.cookies.map((c, i) => (
+                      <tr
+                        key={i}
+                        className="border-b border-[var(--color-elevated)]"
+                      >
+                        <td className="py-1 pr-4 font-medium text-[var(--color-text-secondary)]">
+                          {c.name}
+                        </td>
+                        <td className="py-1 pr-4 text-[var(--color-text-primary)]">
+                          {c.value}
+                        </td>
+                        <td className="py-1 pr-4 text-[var(--color-text-muted)]">
+                          {c.domain ?? "—"}
+                        </td>
+                        <td className="py-1 text-[var(--color-text-muted)]">
+                          {c.path ?? "/"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )}
+
+          {activeTab === "visualizations" && (
+            <div className="space-y-4">
+              {(response.visualizations ?? []).length === 0 && (
+                <p>
+                  No visualizations for this run. Use ark.visualize in a
+                  post-response script.
+                </p>
+              )}
+              {(response.visualizations ?? []).map((output, index) => (
+                <section key={`${tab.id}-${index}`}>
+                  <h3 className="mb-2 text-sm font-medium">{output.name}</h3>
+                  {output.type === "image" ? (
+                    <img
+                      src={`data:${output.mimeType};base64,${output.data}`}
+                      alt={output.name}
+                      width={output.width}
+                      height={output.height}
+                      className="max-h-[70vh] max-w-full object-contain"
+                    />
+                  ) : (
+                    <pre className="whitespace-pre-wrap break-words text-sm">
+                      {output.type === "text"
+                        ? output.data
+                        : JSON.stringify(output.data, null, 2)}
+                    </pre>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
+          {activeTab === "timing" && <TimingPanel response={response} />}
+        </div>
       )}
     </div>
   );
 }
 
-function ResponseBodyActions({ body }: { body: string }) {
+export function ResponseBodyActions({
+  body,
+  bodyBase64,
+}: {
+  body: string;
+  bodyBase64?: string;
+}) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const tab = useActiveTab();
@@ -236,7 +319,7 @@ function ResponseBodyActions({ body }: { body: string }) {
       await navigator.clipboard.writeText(body);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       import("@/stores/toast-store").then(({ useToastStore }) =>
         useToastStore.getState().showError("Failed to copy to clipboard"),
       );
@@ -254,7 +337,14 @@ function ResponseBodyActions({ body }: { body: string }) {
         ],
       });
       if (filePath) {
-        await writeTextFile(filePath, body);
+        if (bodyBase64 != null) {
+          const bytes = Uint8Array.from(atob(bodyBase64), (c) =>
+            c.charCodeAt(0),
+          );
+          await writeFile(filePath, bytes);
+        } else {
+          await writeTextFile(filePath, body);
+        }
       }
     } catch (err) {
       import("@/stores/toast-store").then(({ useToastStore }) =>
@@ -270,7 +360,11 @@ function ResponseBodyActions({ body }: { body: string }) {
         className="flex items-center gap-1 rounded px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-elevated)] hover:text-[var(--color-text-secondary)]"
         title={t("response.copy")}
       >
-        {copied ? <Check className="h-3 w-3 text-green-500" /> : <ClipboardCopy className="h-3 w-3" />}
+        {copied ? (
+          <Check className="h-3 w-3 text-green-500" />
+        ) : (
+          <ClipboardCopy className="h-3 w-3" />
+        )}
         {copied ? t("response.copied") : t("response.copy")}
       </button>
       <button
@@ -319,14 +413,26 @@ function ResponseTabs({
 }: {
   activeTab: ResponseTab;
   setActiveTab: (tab: ResponseTab) => void;
-  response: { headers: { key: string; value: string }[]; cookies: { name: string }[] } | null;
+  response: {
+    headers: { key: string; value: string }[];
+    cookies: { name: string }[];
+  } | null;
   hasTestResults: boolean;
   failedCount: number;
   consoleCount: number;
 }) {
   const { t } = useTranslation();
 
-  const TAB_IDS: ResponseTab[] = ["body", "visualizations", "headers", "cookies", "tests", "timing", "console", "code"];
+  const TAB_IDS: ResponseTab[] = [
+    "body",
+    "visualizations",
+    "headers",
+    "cookies",
+    "tests",
+    "timing",
+    "console",
+    "code",
+  ];
   const TAB_LABEL_KEYS: Record<ResponseTab, string> = {
     visualizations: "Visualizations",
     body: "response.body",
@@ -362,7 +468,9 @@ function ResponseTabs({
             </span>
           )}
           {tabId === "tests" && hasTestResults && (
-            <span className={`ml-1 text-xs ${failedCount > 0 ? "text-red-400" : "text-green-500"}`}>
+            <span
+              className={`ml-1 text-xs ${failedCount > 0 ? "text-red-400" : "text-green-500"}`}
+            >
               {failedCount > 0 ? `${failedCount} fail` : "pass"}
             </span>
           )}
@@ -381,7 +489,11 @@ function ConsolePanel({ entries }: { entries: ConsoleEntry[] }) {
   if (entries.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-text-dimmed)]">
-        No console output. Use <code className="rounded bg-[var(--color-elevated)] px-1">console.log()</code> in scripts.
+        No console output. Use{" "}
+        <code className="rounded bg-[var(--color-elevated)] px-1">
+          console.log()
+        </code>{" "}
+        in scripts.
       </div>
     );
   }
@@ -409,7 +521,6 @@ function ConsolePanel({ entries }: { entries: ConsoleEntry[] }) {
   );
 }
 
-
 function tryFormatBody(body: string, language: string): string {
   if (language === "json") {
     try {
@@ -434,6 +545,7 @@ function getLanguageFromHeaders(headers: KeyValuePair[]): string {
   if (contentType.includes("html")) return "html";
   if (contentType.includes("javascript")) return "javascript";
   if (contentType.includes("css")) return "css";
-  if (contentType.includes("yaml") || contentType.includes("x-yaml")) return "yaml";
+  if (contentType.includes("yaml") || contentType.includes("x-yaml"))
+    return "yaml";
   return "plaintext";
 }

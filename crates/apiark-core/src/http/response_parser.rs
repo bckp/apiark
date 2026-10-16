@@ -61,10 +61,38 @@ pub async fn parse_response(
 
     let size_bytes = bytes.len() as u64;
 
-    let body = String::from_utf8(bytes.to_vec()).unwrap_or_else(|_| {
-        // For binary responses, show a placeholder
-        format!("<binary data: {} bytes>", size_bytes)
-    });
+    let content_type = headers
+        .iter()
+        .find(|h| h.key.eq_ignore_ascii_case("content-type"))
+        .map(|h| {
+            h.value
+                .split(';')
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_ascii_lowercase()
+        })
+        .unwrap_or_default();
+    let is_text = content_type.is_empty()
+        || content_type.starts_with("text/")
+        || content_type.ends_with("json")
+        || content_type.ends_with("xml")
+        || content_type == "application/javascript"
+        || content_type == "application/x-www-form-urlencoded";
+    let (body, body_base64) = match String::from_utf8(bytes) {
+        Ok(text) if is_text => (text, None),
+        result => {
+            use base64::Engine;
+            let bytes = match result {
+                Ok(text) => text.into_bytes(),
+                Err(error) => error.into_bytes(),
+            };
+            (
+                format!("<binary data: {size_bytes} bytes>"),
+                Some(base64::engine::general_purpose::STANDARD.encode(bytes)),
+            )
+        }
+    };
 
     Ok(ResponseData {
         status,
@@ -72,6 +100,7 @@ pub async fn parse_response(
         headers,
         cookies,
         body,
+        body_base64,
         time_ms: elapsed_ms,
         size_bytes,
         truncated: None,

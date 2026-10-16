@@ -24,7 +24,7 @@ export const useHistoryStore = create<HistoryState>((set) => ({
     try {
       const entries = await getHistoryApi();
       set({ entries, loading: false });
-    } catch (err) {
+    } catch {
       import("@/stores/toast-store").then(({ useToastStore }) =>
         useToastStore.getState().showWarning("Could not load request history"),
       );

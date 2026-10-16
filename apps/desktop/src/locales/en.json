@@ -41,10 +41,6 @@
     "location": "Location",
     "creating": "Creating...",
     "exportPostman": "Export as Postman",
-    "exportOpenapi": "Export as OpenAPI",
-    "exportApiark": "Export as ApiArk ZIP",
-    "startMockServer": "Start Mock Server",
-    "generateDocs": "Generate Docs",
     "requestName": "Request name:",
     "folderName": "Folder name:",
     "openCollectionFirst": "Open a collection first to manage environments",
@@ -250,17 +246,7 @@
     "exportState": "Export App State",
     "importState": "Import App State",
     "exporting": "Exporting...",
-    "importing": "Importing...",
-    "updates": "Updates",
-    "updateChannel": "Update Channel",
-    "stable": "Stable",
-    "beta": "Beta",
-    "nightly": "Nightly",
-    "checkForUpdates": "Check for Updates",
-    "upToDate": "You're up to date",
-    "updateAvailable": "Update available: {{version}}",
-    "shortcuts": "Keyboard Shortcuts",
-    "recording": "Press key combination..."
+    "importing": "Importing..."
   },
   "runner": {
     "title": "Collection Runner",
@@ -289,11 +275,6 @@
     "warnings": "{{count}} warnings",
     "source": "Source",
     "postman": "Postman v2.1",
-    "insomnia": "Insomnia v4",
-    "bruno": "Bruno",
-    "openapi": "OpenAPI 3.x",
-    "hoppscotch": "Hoppscotch",
-    "har": "HAR (HTTP Archive)",
     "next": "Next",
     "back": "Back",
     "done": "Done",
@@ -303,38 +284,7 @@
   "export": {
     "title": "Export Collection",
     "format": "Format",
-    "postman": "Postman v2.1",
-    "openapi": "OpenAPI 3.0",
-    "apiark": "ApiArk YAML"
-  },
-  "commandPalette": {
-    "title": "Command Palette",
-    "placeholder": "Type a command...",
-    "noResults": "No commands found",
-    "general": "General",
-    "view": "View",
-    "tabs": "Tabs",
-    "requests": "Requests",
-    "environments": "Environments",
-    "newHttpRequest": "New HTTP Request",
-    "newGraphqlRequest": "New GraphQL Request",
-    "newWebsocket": "New WebSocket Connection",
-    "newSse": "New SSE Connection",
-    "newGrpc": "New gRPC Request",
-    "openSettings": "Settings",
-    "importCurl": "Import cURL",
-    "importCollection": "Import Collection",
-    "compareResponses": "Compare Responses",
-    "mockServers": "Mock Servers",
-    "scheduledMonitors": "Scheduled Monitors",
-    "generateDocs": "Generate API Docs",
-    "runCollection": "Run Collection",
-    "toggleZenMode": "Toggle Zen Mode",
-    "toggleTerminal": "Toggle Terminal",
-    "toggleConsole": "Toggle Console",
-    "switchTo": "Switch to",
-    "navigate": "Navigate with arrow keys",
-    "enterToSelect": "Enter to select"
+    "postman": "Postman v2.1"
   },
   "common": {
     "save": "Save",
@@ -378,17 +328,6 @@
     "failedToImport": "Failed to import: {{reason}}",
     "failedToExport": "Failed to export: {{reason}}"
   },
-  "onboarding": {
-    "welcome": "Welcome to ApiArk",
-    "tagline": "Local-first API development. No accounts. No cloud. Just speed.",
-    "startScratch": "Start from scratch",
-    "startScratchDesc": "Create a sample collection with example requests",
-    "importExisting": "Import existing collection",
-    "importExistingDesc": "From Postman, Insomnia, Bruno, or OpenAPI",
-    "openFolder": "Open a folder",
-    "openFolderDesc": "Open a directory with an existing ApiArk collection",
-    "chooseTheme": "Choose your theme"
-  },
   "console": {
     "title": "Console",
     "terminal": "Terminal",
@@ -401,111 +340,10 @@
     "warn": "warn",
     "noLogs": "No console output"
   },
-  "grpc": {
-    "title": "gRPC",
-    "loadProto": "Load .proto",
-    "service": "Service",
-    "method": "Method",
-    "invoke": "Invoke",
-    "metadata": "Metadata",
-    "requestBody": "Request Body (JSON)",
-    "responseBody": "Response",
-    "loadProtoToStart": "Load a .proto file to get started",
-    "selectMethodToSend": "Select a method and send a request"
-  },
-  "graphql": {
-    "query": "GraphQL Query",
-    "variables": "Variables",
-    "variablesJson": "Variables (JSON)",
-    "operationName": "Operation Name (optional)",
-    "fetchSchema": "Fetch Schema (Introspection)",
-    "fetchingSchema": "Fetching...",
-    "schema": "Schema",
-    "schemaTypes": "Schema Types"
-  },
-  "mock": {
-    "title": "Mock Servers",
-    "start": "Start Mock Server",
-    "stop": "Stop",
-    "stopServer": "Stop server",
-    "port": "Port",
-    "latency": "Latency (ms)",
-    "errorRate": "Error %",
-    "running": "Running",
-    "stopped": "Stopped",
-    "collection": "Collection",
-    "starting": "Starting...",
-    "noServers": "No mock servers running",
-    "endpoints": "Endpoints",
-    "endpoint": "endpoint",
-    "requestLog": "Request Log",
-    "clearLogs": "Clear logs",
-    "waitingForRequests": "Waiting for requests on localhost:",
-    "selectServer": "Select a server to view details",
-    "createDesc": "Create local mock servers from your collections",
-    "newMockServer": "New Mock Server"
-  },
-  "monitor": {
-    "title": "Monitors",
-    "create": "Create Monitor",
-    "schedule": "Schedule",
-    "lastRun": "Last Run",
-    "nextRun": "Next Run",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "createDesc": "Schedule automated collection runs",
-    "newMonitor": "New Monitor"
-  },
-  "docs": {
-    "title": "API Documentation",
-    "generate": "Generate",
-    "generateDocs": "Generate Docs",
-    "preview": "Preview",
-    "html": "HTML",
-    "markdown": "Markdown",
-    "generating": "Generating documentation...",
-    "generateDesc": "Generate documentation from collections"
-  },
   "diff": {
     "title": "Response Diff",
     "snapshot": "Snapshot",
     "compare": "Compare"
-  },
-  "trash": {
-    "title": "Trash",
-    "restore": "Restore",
-    "emptyTrash": "Empty Trash",
-    "deletedAt": "Deleted {{date}}"
-  },
-  "migration": {
-    "title": "Collection Format Update",
-    "newerFormat": "Newer Collection Format",
-    "message": "This collection uses format v{{old}}. The current version is v{{new}}.",
-    "upgrade": "Upgrade",
-    "readOnly": "Open Read-Only",
-    "upgradeHint": "Upgrading will rewrite collection files. Commit your changes first."
-  },
-  "websocket": {
-    "connect": "Connect",
-    "disconnect": "Disconnect",
-    "send": "Send",
-    "connected": "Connected",
-    "disconnected": "Disconnected",
-    "messages": "Messages",
-    "connectToStart": "Connect to start streaming"
-  },
-  "sse": {
-    "connect": "Connect",
-    "disconnect": "Disconnect",
-    "events": "Events",
-    "connected": "Connected",
-    "disconnected": "Disconnected",
-    "connectToStart": "Connect to start streaming"
-  },
-  "ai": {
-    "title": "AI Assistant",
-    "comingSoon": "AI Assistant",
-    "comingSoonDesc": "Generate API requests from natural language and auto-generate tests from responses. Configure your AI provider in Settings."
   },
   "cookies": {
     "title": "Cookie Jar",
@@ -526,31 +364,9 @@
     "persistCookies": "Persist Cookies",
     "persistCookiesDesc": "Save cookies to disk across app restarts"
   },
-  "tour": {
-    "skip": "Skip tour",
-    "back": "Back",
-    "next": "Next",
-    "getStarted": "Get Started",
-    "of": "of",
-    "collectionsSidebar": "Collections Sidebar",
-    "environmentSelector": "Environment Selector",
-    "requestTabs": "Request Tabs",
-    "urlBar": "URL Bar",
-    "queryParameters": "Query Parameters",
-    "requestHeaders": "Headers",
-    "requestBody": "Request Body",
-    "authentication": "Authentication",
-    "scripts": "Scripts",
-    "testsAssertions": "Tests & Assertions",
-    "responseViewer": "Response Viewer",
-    "sendFirstRequest": "Send Your First Request!"
-  },
   "confirmDelete": {
     "title": "Confirm Delete",
     "request": "Delete \"{{name}}\"?",
     "collection": "Delete collection \"{{name}}\"? This will move the entire collection to trash."
-  },
-  "audit": {
-    "title": "Audit Logs"
   }
 }

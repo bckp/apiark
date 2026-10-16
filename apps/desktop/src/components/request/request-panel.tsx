@@ -52,7 +52,8 @@ export function RequestPanel() {
     setAssertions,
   } = useTabStore();
 
-  const pathVars = useMemo(() => tab ? extractPathVariables(tab.url) : [], [tab?.url]);
+  const requestUrl = tab?.url ?? "";
+  const pathVars = useMemo(() => extractPathVariables(requestUrl), [requestUrl]);
 
   if (!tab) return null;
 

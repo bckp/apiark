@@ -13,7 +13,10 @@ interface CurlImportDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function CurlImportDialog({ open, onOpenChange }: CurlImportDialogProps) {
+export function CurlImportDialog({
+  open,
+  onOpenChange,
+}: CurlImportDialogProps) {
   const [curlInput, setCurlInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
@@ -27,39 +30,36 @@ export function CurlImportDialog({ open, onOpenChange }: CurlImportDialogProps) 
     try {
       const parsed = await parseCurlCommand(curlInput.trim());
 
-      const { newTab, setMethod, setUrl, setHeaders, setBody, setAuth } =
-        useTabStore.getState();
-      newTab();
-
-      // Small delay to let tab render
-      setTimeout(() => {
-        setMethod(parsed.method as HttpMethod);
-        setUrl(parsed.url);
-
-        // Set headers
-        const headers: KeyValuePair[] = Object.entries(parsed.headers).map(
-          ([key, value]) => ({ id: kvId(), key, value, enabled: true }),
-        );
-        if (headers.length > 0) setHeaders([...headers, { id: kvId(), key: "", value: "", enabled: true }]);
-
-        // Set body
-        if (parsed.body) {
-          setBody({
-            type: (parsed.bodyType as BodyType) ?? "raw",
-            content: parsed.body,
-            formData: [],
-          });
-        }
-
-        // Set auth
-        if (parsed.authBasic) {
-          setAuth({
-            type: "basic",
-            username: parsed.authBasic[0],
-            password: parsed.authBasic[1],
-          });
-        }
-      }, 0);
+      const headers: KeyValuePair[] = Object.entries(parsed.headers).map(
+        ([key, value]) => ({ id: kvId(), key, value, enabled: true }),
+      );
+      // Create the complete new request atomically; no delayed active-tab mutations.
+      useTabStore.getState().newTab({
+        method: parsed.method as HttpMethod,
+        url: parsed.url,
+        headers: [
+          ...headers,
+          { id: kvId(), key: "", value: "", enabled: true },
+        ],
+        body: {
+          type: parsed.body ? ((parsed.bodyType as BodyType) ?? "raw") : "none",
+          content: parsed.body ?? "",
+          formData:
+            parsed.bodyType === "urlencoded"
+              ? [...new URLSearchParams(parsed.body ?? "")].map(
+                  ([key, value]) => ({ id: kvId(), key, value, enabled: true }),
+                )
+              : [],
+        },
+        auth: parsed.authBasic
+          ? {
+              type: "basic",
+              username: parsed.authBasic[0],
+              password: parsed.authBasic[1],
+            }
+          : { type: "none" },
+        isDirty: true,
+      });
 
       setCurlInput("");
       onOpenChange(false);
@@ -89,14 +89,14 @@ export function CurlImportDialog({ open, onOpenChange }: CurlImportDialogProps) 
             <textarea
               value={curlInput}
               onChange={(e) => setCurlInput(e.target.value)}
-              placeholder={'Paste your cURL command here...\n\ncurl -X POST https://api.example.com/users \\\n  -H \'Content-Type: application/json\' \\\n  -d \'{"name": "John"}\''}
+              placeholder={
+                "Paste your cURL command here...\n\ncurl -X POST https://api.example.com/users \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\": \"John\"}'"
+              }
               className="h-48 w-full resize-y rounded bg-[var(--color-elevated)] p-3 font-mono text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
               spellCheck={false}
             />
 
-            {error && (
-              <p className="mt-2 text-sm text-red-400">{error}</p>
-            )}
+            {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
 
             <div className="mt-4 flex justify-end gap-2">
               <Dialog.Close className="rounded px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-elevated)]">

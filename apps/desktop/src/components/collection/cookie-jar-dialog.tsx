@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Cookie, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,7 @@ export function CookieJarDialog({
   const [cookies, setCookies] = useState<CookieJarEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadCookies = async () => {
+  const loadCookies = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getCookieJar(collectionPath);
@@ -34,13 +34,13 @@ export function CookieJarDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }, [collectionPath]);
 
   useEffect(() => {
     if (open) {
       loadCookies();
     }
-  }, [open, collectionPath]);
+  }, [open, loadCookies]);
 
   const handleDelete = async (name: string, domain: string) => {
     try {

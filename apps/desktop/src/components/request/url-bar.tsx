@@ -208,9 +208,9 @@ function VariableEditor({
 type UrlBarProps = {
   /** Extra buttons to render between the URL input and the Send button */
   extraActions?: React.ReactNode;
-  /** Override the Send button entirely (used by WS/SSE for Connect/Disconnect) */
+  /** Override the Send button */
   sendButton?: React.ReactNode;
-  /** Disable URL input (e.g. while WS is connected) */
+  /** Disable URL input */
   urlDisabled?: boolean;
 };
 
@@ -235,10 +235,11 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
     [ref],
   );
 
-  const variableRefs = useMemo(
-    () => (tab ? extractVariableRefs(tab) : []),
-    [tab?.url, tab?.headers, tab?.params, tab?.body.content],
-  );
+  const url=tab?.url??"";
+  const headers=tab?.headers;
+  const params=tab?.params;
+  const content=tab?.body.content??"";
+  const variableRefs = useMemo(() => extractVariableRefs({url,headers:headers??[],params:params??[],body:{content}}),[url,headers,params,content]);
 
   const activeEnvName = useEnvironmentStore((s) => s.activeEnvironmentName);
 
@@ -256,7 +257,7 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
   }, [variableRefs, activeEnvName]);
 
   // URL segments for the overlay
-  const urlSegments = useMemo(() => (tab ? splitUrlSegments(tab.url) : []), [tab?.url]);
+  const urlSegments = useMemo(() => splitUrlSegments(url), [url]);
   const hasVariablesInUrl = urlSegments.some((s) => s.type === "var");
 
   const handleSaveVariable = useCallback(async (varName: string, value: string) => {
@@ -288,11 +289,13 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
   }, []);
 
   // Watch for response/error changes to flash the send button
+  const response=tab?.response;const error=tab?.error;const loading=tab?.loading;
+  const failedTests=Boolean(tab?.testResults.some(t=>!t.passed)||tab?.assertionResults.some(t=>!t.passed));
   useEffect(() => {
-    if (!tab || tab.loading) return;
-    if (tab.response) flashSendButton(tab.response.status < 400);
-    else if (tab.error) flashSendButton(false);
-  }, [tab?.response, tab?.error, tab?.loading, flashSendButton]);
+    if (loading) return;
+    if (response) flashSendButton(response.status < 400 && !failedTests);
+    else if (error) flashSendButton(false);
+  }, [response,error,loading,failedTests,flashSendButton]);
 
   if (!tab) return null;
 
@@ -366,7 +369,7 @@ export const UrlBar = forwardRef<HTMLInputElement, UrlBarProps>(function UrlBar(
       {/* Extra protocol-specific actions */}
       {extraActions}
 
-      {/* Send button (or custom override for WS/SSE) */}
+      {/* Send button */}
       {sendButton ?? (
         <div className="relative">
           <button

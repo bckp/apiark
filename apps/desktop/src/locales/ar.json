@@ -41,10 +41,6 @@
     "location": "الموقع",
     "creating": "جارٍ الإنشاء...",
     "exportPostman": "تصدير كـ Postman",
-    "exportOpenapi": "تصدير كـ OpenAPI",
-    "exportApiark": "تصدير كـ ApiArk ZIP",
-    "startMockServer": "بدء خادم Mock",
-    "generateDocs": "توليد الوثائق",
     "requestName": "اسم الطلب:",
     "folderName": "اسم المجلد:",
     "openCollectionFirst": "افتح مجموعة أولاً لإدارة البيئات",
@@ -250,17 +246,7 @@
     "exportState": "تصدير حالة التطبيق",
     "importState": "استيراد حالة التطبيق",
     "exporting": "جارٍ التصدير...",
-    "importing": "جارٍ الاستيراد...",
-    "updates": "التحديثات",
-    "updateChannel": "قناة التحديث",
-    "stable": "مستقر",
-    "beta": "بيتا",
-    "nightly": "Nightly",
-    "checkForUpdates": "التحقق من التحديثات",
-    "upToDate": "أنت على أحدث إصدار",
-    "updateAvailable": "تحديث متاح: {{version}}",
-    "shortcuts": "اختصارات لوحة المفاتيح",
-    "recording": "اضغط مجموعة المفاتيح..."
+    "importing": "جارٍ الاستيراد..."
   },
   "runner": {
     "title": "مشغّل المجموعة",
@@ -289,11 +275,6 @@
     "warnings": "{{count}} تحذيرات",
     "source": "المصدر",
     "postman": "Postman v2.1",
-    "insomnia": "Insomnia v4",
-    "bruno": "Bruno",
-    "openapi": "OpenAPI 3.x",
-    "hoppscotch": "Hoppscotch",
-    "har": "HAR (HTTP Archive)",
     "next": "التالي",
     "back": "رجوع",
     "done": "تم",
@@ -303,38 +284,7 @@
   "export": {
     "title": "تصدير المجموعة",
     "format": "التنسيق",
-    "postman": "Postman v2.1",
-    "openapi": "OpenAPI 3.0",
-    "apiark": "ApiArk YAML"
-  },
-  "commandPalette": {
-    "title": "لوحة الأوامر",
-    "placeholder": "اكتب أمراً...",
-    "noResults": "لا توجد أوامر مطابقة",
-    "general": "عام",
-    "view": "عرض",
-    "tabs": "علامات التبويب",
-    "requests": "الطلبات",
-    "environments": "البيئات",
-    "newHttpRequest": "طلب HTTP جديد",
-    "newGraphqlRequest": "طلب GraphQL جديد",
-    "newWebsocket": "اتصال WebSocket جديد",
-    "newSse": "اتصال SSE جديد",
-    "newGrpc": "طلب gRPC جديد",
-    "openSettings": "الإعدادات",
-    "importCurl": "استيراد cURL",
-    "importCollection": "استيراد مجموعة",
-    "compareResponses": "مقارنة الاستجابات",
-    "mockServers": "خوادم Mock",
-    "scheduledMonitors": "المراقبات المجدولة",
-    "generateDocs": "توليد وثائق API",
-    "runCollection": "تشغيل المجموعة",
-    "toggleZenMode": "تبديل وضع Zen",
-    "toggleTerminal": "تبديل الطرفية",
-    "toggleConsole": "تبديل وحدة التحكم",
-    "switchTo": "التبديل إلى",
-    "navigate": "التنقل بمفاتيح الأسهم",
-    "enterToSelect": "Enter للاختيار"
+    "postman": "Postman v2.1"
   },
   "common": {
     "save": "حفظ",
@@ -378,17 +328,6 @@
     "failedToImport": "فشل الاستيراد: {{reason}}",
     "failedToExport": "فشل التصدير: {{reason}}"
   },
-  "onboarding": {
-    "welcome": "مرحباً بك في ApiArk",
-    "tagline": "تطوير API محلي أولاً. بدون حسابات. بدون سحابة. سرعة فقط.",
-    "startScratch": "البدء من الصفر",
-    "startScratchDesc": "إنشاء مجموعة نموذجية مع طلبات تجريبية",
-    "importExisting": "استيراد مجموعة موجودة",
-    "importExistingDesc": "من Postman أو Insomnia أو Bruno أو OpenAPI",
-    "openFolder": "فتح مجلد",
-    "openFolderDesc": "فتح دليل يحتوي على مجموعة ApiArk موجودة",
-    "chooseTheme": "اختر المظهر"
-  },
   "console": {
     "title": "وحدة التحكم",
     "terminal": "الطرفية",
@@ -401,111 +340,10 @@
     "warn": "warn",
     "noLogs": "لا يوجد إخراج في وحدة التحكم"
   },
-  "grpc": {
-    "title": "gRPC",
-    "loadProto": "تحميل .proto",
-    "service": "الخدمة",
-    "method": "الطريقة",
-    "invoke": "استدعاء",
-    "metadata": "البيانات الوصفية",
-    "requestBody": "محتوى الطلب (JSON)",
-    "responseBody": "الاستجابة",
-    "loadProtoToStart": "حمّل ملف .proto للبدء",
-    "selectMethodToSend": "اختر طريقة وأرسل طلباً"
-  },
-  "graphql": {
-    "query": "استعلام GraphQL",
-    "variables": "المتغيرات",
-    "variablesJson": "المتغيرات (JSON)",
-    "operationName": "اسم العملية (اختياري)",
-    "fetchSchema": "جلب المخطط (استبطان)",
-    "fetchingSchema": "جارٍ الجلب...",
-    "schema": "المخطط",
-    "schemaTypes": "أنواع المخطط"
-  },
-  "mock": {
-    "title": "خوادم Mock",
-    "start": "بدء خادم Mock",
-    "stop": "إيقاف",
-    "stopServer": "إيقاف الخادم",
-    "port": "المنفذ",
-    "latency": "زمن الاستجابة (مللي ثانية)",
-    "errorRate": "نسبة الخطأ %",
-    "running": "قيد التشغيل",
-    "stopped": "متوقف",
-    "collection": "المجموعة",
-    "starting": "جارٍ البدء...",
-    "noServers": "لا توجد خوادم Mock قيد التشغيل",
-    "endpoints": "نقاط النهاية",
-    "endpoint": "نقطة نهاية",
-    "requestLog": "سجل الطلبات",
-    "clearLogs": "مسح السجلات",
-    "waitingForRequests": "في انتظار الطلبات على localhost:",
-    "selectServer": "اختر خادماً لعرض التفاصيل",
-    "createDesc": "أنشئ خوادم Mock محلية من مجموعاتك",
-    "newMockServer": "خادم Mock جديد"
-  },
-  "monitor": {
-    "title": "المراقبات",
-    "create": "إنشاء مراقبة",
-    "schedule": "الجدول",
-    "lastRun": "آخر تشغيل",
-    "nextRun": "التشغيل التالي",
-    "enabled": "مفعّل",
-    "disabled": "معطّل",
-    "createDesc": "جدولة عمليات تشغيل المجموعة التلقائية",
-    "newMonitor": "مراقبة جديدة"
-  },
-  "docs": {
-    "title": "وثائق API",
-    "generate": "توليد",
-    "generateDocs": "توليد الوثائق",
-    "preview": "معاينة",
-    "html": "HTML",
-    "markdown": "Markdown",
-    "generating": "جارٍ توليد الوثائق...",
-    "generateDesc": "توليد الوثائق من المجموعات"
-  },
   "diff": {
     "title": "مقارنة الاستجابة",
     "snapshot": "لقطة",
     "compare": "مقارنة"
-  },
-  "trash": {
-    "title": "سلة المحذوفات",
-    "restore": "استعادة",
-    "emptyTrash": "إفراغ سلة المحذوفات",
-    "deletedAt": "حُذف في {{date}}"
-  },
-  "migration": {
-    "title": "تحديث تنسيق المجموعة",
-    "newerFormat": "تنسيق مجموعة أحدث",
-    "message": "تستخدم هذه المجموعة التنسيق v{{old}}. الإصدار الحالي هو v{{new}}.",
-    "upgrade": "ترقية",
-    "readOnly": "فتح للقراءة فقط",
-    "upgradeHint": "ستعيد الترقية كتابة ملفات المجموعة. قم بعمل commit لتغييراتك أولاً."
-  },
-  "websocket": {
-    "connect": "اتصال",
-    "disconnect": "قطع الاتصال",
-    "send": "إرسال",
-    "connected": "متصل",
-    "disconnected": "غير متصل",
-    "messages": "الرسائل",
-    "connectToStart": "اتصل لبدء البث"
-  },
-  "sse": {
-    "connect": "اتصال",
-    "disconnect": "قطع الاتصال",
-    "events": "الأحداث",
-    "connected": "متصل",
-    "disconnected": "غير متصل",
-    "connectToStart": "اتصل لبدء البث"
-  },
-  "ai": {
-    "title": "مساعد AI",
-    "comingSoon": "AI Assistant",
-    "comingSoonDesc": "Generate API requests from natural language and auto-generate tests from responses. Configure your AI provider in Settings."
   },
   "cookies": {
     "title": "وعاء الكوكيز",
@@ -526,31 +364,9 @@
     "persistCookies": "الاحتفاظ بالكوكيز",
     "persistCookiesDesc": "حفظ الكوكيز على القرص عبر إعادة تشغيل التطبيق"
   },
-  "tour": {
-    "skip": "تخطي الجولة",
-    "back": "رجوع",
-    "next": "التالي",
-    "getStarted": "ابدأ",
-    "of": "من",
-    "collectionsSidebar": "الشريط الجانبي للمجموعات",
-    "environmentSelector": "محدد البيئة",
-    "requestTabs": "علامات تبويب الطلبات",
-    "urlBar": "شريط URL",
-    "queryParameters": "معاملات الاستعلام",
-    "requestHeaders": "الترويسات",
-    "requestBody": "محتوى الطلب",
-    "authentication": "المصادقة",
-    "scripts": "البرامج النصية",
-    "testsAssertions": "الاختبارات والتأكيدات",
-    "responseViewer": "عارض الاستجابة",
-    "sendFirstRequest": "أرسل طلبك الأول!"
-  },
   "confirmDelete": {
     "title": "تأكيد الحذف",
     "request": "حذف \"{{name}}\"؟",
     "collection": "حذف المجموعة \"{{name}}\"؟ سيتم نقل المجموعة بالكامل إلى سلة المحذوفات."
-  },
-  "audit": {
-    "title": "سجلات التدقيق"
   }
 }

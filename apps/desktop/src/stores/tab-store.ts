@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import {parseUrlParams,buildUrlWithParams,extractPathVariables,resolvePathVariables} from "@/lib/url-params";
+import {
+  parseUrlParams,
+  buildUrlWithParams,
+  extractPathVariables,
+  resolvePathVariables,
+} from "@/lib/url-params";
 import type {
   HttpMethod,
   KeyValuePair,
@@ -29,17 +34,13 @@ interface TabState {
   autoSaveError: string | null;
 
   // Tab management
-  newTab: () => void;
+  newTab: (request?: Partial<Tab>) => void;
   openTab: (filePath: string, collectionPath: string) => Promise<void>;
   closeTab: (id: string) => void;
   closeOtherTabs: (id: string) => void;
   closeAllTabs: () => void;
   setActiveTab: (id: string) => void;
   reorderTabs: (fromIndex: number, toIndex: number) => void;
-
-  // Protocol-specific tab creation
-
-  // GraphQL mutations
 
   // Active tab request mutations
   setMethod: (method: HttpMethod) => void;
@@ -69,7 +70,10 @@ interface TabState {
   redoTab: () => void;
 
   // Conflict resolution
-  handleExternalChange: (filePath: string, changeType: "modified" | "deleted") => void;
+  handleExternalChange: (
+    filePath: string,
+    changeType: "modified" | "deleted",
+  ) => void;
   reloadFromDisk: (tabId: string) => Promise<void>;
   dismissConflict: (tabId: string) => void;
 
@@ -161,7 +165,12 @@ if (typeof window !== "undefined") {
 
 let kvCounter = 0;
 const kvId = () => `kv_${Date.now()}_${++kvCounter}`;
-const emptyKvRow = (): KeyValuePair => ({ id: kvId(), key: "", value: "", enabled: true });
+const emptyKvRow = (): KeyValuePair => ({
+  id: kvId(),
+  key: "",
+  value: "",
+  enabled: true,
+});
 
 function createEmptyTab(overrides?: Partial<Tab>): Tab {
   return {
@@ -219,6 +228,9 @@ function requestFileToTab(
   filePath: string,
   collectionPath: string,
 ): Tab {
+  if (file.protocol && !["http", "graphql"].includes(file.protocol)) {
+    throw new Error(`Unsupported protocol: ${file.protocol}`);
+  }
   // Convert Record<string, string> headers to KeyValuePair[]
   const headers: KeyValuePair[] = Object.entries(file.headers || {}).map(
     ([key, value]) => ({ id: kvId(), key, value, enabled: true }),
@@ -227,9 +239,7 @@ function requestFileToTab(
 
   // Separate path variables from query params.
   // Path variables match :paramName placeholders in the URL.
-  const urlPathVarNames = new Set(
-    extractPathVariables(file.url),
-  );
+  const urlPathVarNames = new Set(extractPathVariables(file.url));
   const pathVariables: Record<string, string> = {};
   const fileQueryParams: KeyValuePair[] = [];
   for (const [key, value] of Object.entries(file.params || {})) {
@@ -247,14 +257,28 @@ function requestFileToTab(
     ...urlParams,
     ...fileQueryParams.filter((p) => !seenKeys.has(p.key)),
   ];
-  const params = mergedParams.length > 0 ? [...mergedParams, emptyKvRow()] : [emptyKvRow()];
+  const params =
+    mergedParams.length > 0 ? [...mergedParams, emptyKvRow()] : [emptyKvRow()];
 
   // Convert body
   const body: RequestBody = file.body
     ? {
         type: file.body.type as RequestBody["type"],
         content: file.body.content || "",
-        formData: file.body.type === "form-data" ? JSON.parse(file.body.content || "[]").map((v: Record<string, unknown>) => ({...v, id: kvId(), enabled: v.disabled !== true && v.enabled !== false})) : file.body.type === "urlencoded" ? [...new URLSearchParams(file.body.content || "")].map(([key,value]) => ({id:kvId(),key,value,enabled:true})) : [],
+        formData:
+          file.body.type === "form-data"
+            ? JSON.parse(file.body.content || "[]").map(
+                (v: Record<string, unknown>) => ({
+                  ...v,
+                  id: kvId(),
+                  enabled: v.disabled !== true && v.enabled !== false,
+                }),
+              )
+            : file.body.type === "urlencoded"
+              ? [...new URLSearchParams(file.body.content || "")].map(
+                  ([key, value]) => ({ id: kvId(), key, value, enabled: true }),
+                )
+              : [],
       }
     : { type: "none", content: "", formData: [] };
 
@@ -268,9 +292,12 @@ function requestFileToTab(
         assertionsStr = Object.entries(file.assert as Record<string, unknown>)
           .map(([k, v]) => {
             if (typeof v === "object" && v !== null) {
-              return `${k}:\n` + Object.entries(v as Record<string, unknown>)
-                .map(([ok, ov]) => `  ${ok}: ${JSON.stringify(ov)}`)
-                .join("\n");
+              return (
+                `${k}:\n` +
+                Object.entries(v as Record<string, unknown>)
+                  .map(([ok, ov]) => `  ${ok}: ${JSON.stringify(ov)}`)
+                  .join("\n")
+              );
             }
             return `${k}: ${JSON.stringify(v)}`;
           })
@@ -293,7 +320,7 @@ function requestFileToTab(
     isDirty: false,
     protocol: "http",
     method: file.method,
-    url: buildUrlWithParams(file.url,mergedParams),
+    url: buildUrlWithParams(file.url, mergedParams),
     headers,
     params,
     pathVariables,
@@ -328,10 +355,26 @@ function tabToRequestFile(tab: Tab): RequestFile {
 
   // Save path variables to the params field
   const params: Record<string, string> | undefined =
-    Object.keys(tab.pathVariables).length > 0 ? { ...tab.pathVariables } : undefined;
+    Object.keys(tab.pathVariables).length > 0
+      ? { ...tab.pathVariables }
+      : undefined;
 
-  const body = tab.body.type === "none" ? undefined : { type:tab.body.type,
-    content:tab.body.type === "form-data" ? JSON.stringify(tab.body.formData) : tab.body.type === "urlencoded" ? new URLSearchParams(tab.body.formData.filter(v=>v.enabled).map(v=>[v.key,v.value])).toString() : tab.body.content };
+  const body =
+    tab.body.type === "none"
+      ? undefined
+      : {
+          type: tab.body.type,
+          content:
+            tab.body.type === "form-data"
+              ? JSON.stringify(tab.body.formData)
+              : tab.body.type === "urlencoded"
+                ? new URLSearchParams(
+                    tab.body.formData
+                      .filter((v) => v.enabled)
+                      .map((v) => [v.key, v.value]),
+                  ).toString()
+                : tab.body.content,
+        };
 
   return {
     postman: tab.postman,
@@ -341,7 +384,10 @@ function tabToRequestFile(tab: Tab): RequestFile {
     protocol: undefined,
     headers,
     params,
-    auth: tab.auth.type !== "none" || tab.authInherited === false ? tab.auth : undefined,
+    auth:
+      tab.auth.type !== "none" || tab.authInherited === false
+        ? tab.auth
+        : undefined,
     body,
     preRequestScript: tab.preRequestScript || undefined,
     postResponseScript: tab.postResponseScript || undefined,
@@ -376,8 +422,14 @@ export const useTabStore = create<TabState>((set, get) => ({
   activeTabId: null,
   autoSaveError: null,
 
-  newTab: () => {
-    const tab = createEmptyTab();
+  newTab: (request) => {
+    const tab = createEmptyTab({
+      ...request,
+      params: request?.params ?? [
+        ...parseUrlParams(request?.url ?? "").params,
+        emptyKvRow(),
+      ],
+    });
     set((state) => ({
       tabs: [...state.tabs, tab],
       activeTabId: tab.id,
@@ -415,7 +467,11 @@ export const useTabStore = create<TabState>((set, get) => ({
         }));
       } else {
         const { useToastStore } = await import("@/stores/toast-store");
-        useToastStore.getState().showError(`Failed to open request: ${String((err as { message?: string })?.message ?? err)}`);
+        useToastStore
+          .getState()
+          .showError(
+            `Failed to open request: ${String((err as { message?: string })?.message ?? err)}`,
+          );
       }
     }
   },
@@ -500,34 +556,60 @@ export const useTabStore = create<TabState>((set, get) => ({
   },
 
   // Request mutations (apply to active tab)
-  setMethod: (method) => set((state) => updateActiveTab(state, () => ({ method }))),
-  setUrl: (url) => set((state) => updateActiveTab(state, (tab) => {
-    // Sync: extract query params from URL into the params table
-    const { params: urlParams } = parseUrlParams(url);
-    // Keep any empty trailing row for UX
-    const emptyRow = tab.params.find((p) => !p.key.trim());
-    const newParams = urlParams.length > 0
-      ? [...urlParams, emptyRow || emptyKvRow()]
-      : [emptyKvRow()];
-    return { url, params: newParams };
-  })),
-  setHeaders: (headers) => set((state) => updateActiveTab(state, () => ({ headers }))),
-  setParams: (params) => set((state) => updateActiveTab(state, (tab) => {
-    // Sync: rebuild URL query string from params
-    const baseUrl = tab.url;
-    const newUrl = buildUrlWithParams(baseUrl, params);
-    return { params, url: newUrl };
-  })),
-  setPathVariables: (pathVariables) => set((state) => updateActiveTab(state, () => ({ pathVariables }))),
+  setMethod: (method) =>
+    set((state) => updateActiveTab(state, () => ({ method }))),
+  setUrl: (url) =>
+    set((state) =>
+      updateActiveTab(state, (tab) => {
+        // Sync: extract query params from URL into the params table
+        const { params: urlParams } = parseUrlParams(url);
+        // Keep any empty trailing row for UX
+        const emptyRow = tab.params.find((p) => !p.key.trim());
+        const newParams =
+          urlParams.length > 0
+            ? [...urlParams, emptyRow || emptyKvRow()]
+            : [emptyKvRow()];
+        return { url, params: newParams };
+      }),
+    ),
+  setHeaders: (headers) =>
+    set((state) => updateActiveTab(state, () => ({ headers }))),
+  setParams: (params) =>
+    set((state) =>
+      updateActiveTab(state, (tab) => {
+        // Sync: rebuild URL query string from params
+        const baseUrl = tab.url;
+        const newUrl = buildUrlWithParams(baseUrl, params);
+        return { params, url: newUrl };
+      }),
+    ),
+  setPathVariables: (pathVariables) =>
+    set((state) => updateActiveTab(state, () => ({ pathVariables }))),
   setBody: (body) => set((state) => updateActiveTab(state, () => ({ body }))),
-  setAuth: (auth) => set((state) => updateActiveTab(state, () => ({ auth, authInherited: false }))),
-  inheritAuth: () => set((state) => updateActiveTab(state, () => ({auth:{type:"none"},authInherited:true}))),
-  setPreRequestScript: (script) => set((state) => updateActiveTab(state, () => ({ preRequestScript: script }))),
-  setPostResponseScript: (script) => set((state) => updateActiveTab(state, () => ({ postResponseScript: script }))),
-  setTestScript: (script) => set((state) => updateActiveTab(state, () => ({ testScript: script }))),
-  setAssertions: (assertions) => set((state) => updateActiveTab(state, () => ({ assertions }))),
+  setAuth: (auth) =>
+    set((state) =>
+      updateActiveTab(state, () => ({ auth, authInherited: false })),
+    ),
+  inheritAuth: () =>
+    set((state) =>
+      updateActiveTab(state, () => ({
+        auth: { type: "none" },
+        authInherited: true,
+      })),
+    ),
+  setPreRequestScript: (script) =>
+    set((state) =>
+      updateActiveTab(state, () => ({ preRequestScript: script })),
+    ),
+  setPostResponseScript: (script) =>
+    set((state) =>
+      updateActiveTab(state, () => ({ postResponseScript: script })),
+    ),
+  setTestScript: (script) =>
+    set((state) => updateActiveTab(state, () => ({ testScript: script }))),
+  setAssertions: (assertions) =>
+    set((state) => updateActiveTab(state, () => ({ assertions }))),
 
-  // GraphQL setters
   send: async () => {
     const { tabs, activeTabId } = get();
     const tab = tabs.find((t) => t.id === activeTabId);
@@ -535,60 +617,84 @@ export const useTabStore = create<TabState>((set, get) => ({
 
     const executionId = crypto.randomUUID();
     requestRuns.set(tab.id, executionId);
-    const current = () => requestRuns.get(tab.id) === executionId && get().tabs.some((t) => t.id === tab.id);
+    const current = () =>
+      requestRuns.get(tab.id) === executionId &&
+      get().tabs.some((t) => t.id === tab.id);
     // Mark loading
     set({
       tabs: tabs.map((t) =>
         t.id === activeTabId
-          ? { ...t, loading: true, error: null, response: null, testResults: [], assertionResults: [], consoleOutput: [] }
+          ? {
+              ...t,
+              loading: true,
+              error: null,
+              response: null,
+              testResults: [],
+              assertionResults: [],
+              consoleOutput: [],
+            }
           : t,
       ),
     });
 
     try {
-    // Get resolved variables from environment store
-    const envStore = useEnvironmentStore.getState();
-    const environmentName = envStore.activeEnvironmentName;
-    const environmentCollection = envStore.activeCollectionPath;
-    const variables = await envStore.getResolvedVariables();
-    if (!current()) return;
+      // Get resolved variables from environment store
+      const envStore = useEnvironmentStore.getState();
+      const environmentName = envStore.activeEnvironmentName;
+      const environmentCollection = envStore.activeCollectionPath;
+      const variables = await envStore.getResolvedVariables();
+      if (!current()) return;
 
-    // Get network settings
-    const { settings } = useSettingsStore.getState();
-    const proxy = settings.proxyUrl
-      ? {
-          url: settings.proxyUrl,
-          username: settings.proxyUsername ?? undefined,
-          password: settings.proxyPassword ?? undefined,
-        }
-      : undefined;
+      // Get network settings
+      const { settings } = useSettingsStore.getState();
+      const proxy = settings.proxyUrl
+        ? {
+            url: settings.proxyUrl,
+            username: settings.proxyUsername ?? undefined,
+            password: settings.proxyPassword ?? undefined,
+          }
+        : undefined;
 
-    // Build body — for GraphQL, construct from graphql state
-    const body = tab.body.type !== "none" ? tab.body : undefined;
-    const headers = tab.headers.filter((h) => h.key.trim() !== "" && h.enabled);
-    // Resolve path variables (:paramName → value) in the URL before sending
-    const resolvedUrl = resolvePathVariables(tab.url.trim(), tab.pathVariables);
+      // Build body — for GraphQL, construct from graphql state
+      const body = tab.body.type !== "none" ? tab.body : undefined;
+      const headers = tab.headers.filter(
+        (h) => h.key.trim() !== "" && h.enabled,
+      );
+      // Resolve path variables (:paramName → value) in the URL before sending
+      const resolvedUrl = resolvePathVariables(
+        tab.url.trim(),
+        tab.pathVariables,
+      );
 
-    const requestParams = {
-      method: tab.method,
-      url: resolvedUrl,
-      headers,
-      // Params are already synced into the URL query string, so send empty
-      // to avoid the Rust side double-appending them
-      params: [] as KeyValuePair[],
-      body,
-      auth: tab.auth.type !== "none" || tab.authInherited === false ? tab.auth : undefined,
-      proxy,
-      timeoutMs: settings.timeoutMs,
-      followRedirects: settings.followRedirects,
-      verifySsl: settings.verifySsl,
-      caCertPath: settings.caCertPath ?? undefined,
-      clientCertPath: settings.clientCertPath ?? undefined,
-      clientKeyPath: settings.clientKeyPath ?? undefined,
-      clientCertPassphrase: settings.clientCertPassphrase ?? undefined,
-    };
+      const requestParams = {
+        method: tab.method,
+        url: resolvedUrl,
+        headers,
+        // Params are already synced into the URL query string, so send empty
+        // to avoid the Rust side double-appending them
+        params: [] as KeyValuePair[],
+        body,
+        auth:
+          tab.auth.type !== "none" || tab.authInherited === false
+            ? tab.auth
+            : undefined,
+        proxy,
+        timeoutMs: settings.timeoutMs,
+        followRedirects: settings.followRedirects,
+        verifySsl: settings.verifySsl,
+        caCertPath: settings.caCertPath ?? undefined,
+        clientCertPath: settings.clientCertPath ?? undefined,
+        clientKeyPath: settings.clientKeyPath ?? undefined,
+        clientCertPassphrase: settings.clientCertPassphrase ?? undefined,
+      };
 
-    const hasScripts = Boolean(tab.collectionPath || tab.preRequestScript || tab.postResponseScript || tab.testScript || tab.assertions);
+      const hasScripts = Boolean(
+        tab.collectionPath ||
+          tab.preRequestScript ||
+          tab.postResponseScript ||
+          tab.testScript ||
+          tab.assertions,
+      );
 
       if (hasScripts) {
         const scriptedResponse = await sendRequestWithScripts(
@@ -604,7 +710,14 @@ export const useTabStore = create<TabState>((set, get) => ({
         );
         if (!current()) return;
         // Apply env mutations to the environment store
-        if (useEnvironmentStore.getState().activeEnvironmentName === environmentName && useEnvironmentStore.getState().activeCollectionPath === environmentCollection && scriptedResponse.envMutations && Object.keys(scriptedResponse.envMutations).length > 0) {
+        if (
+          useEnvironmentStore.getState().activeEnvironmentName ===
+            environmentName &&
+          useEnvironmentStore.getState().activeCollectionPath ===
+            environmentCollection &&
+          scriptedResponse.envMutations &&
+          Object.keys(scriptedResponse.envMutations).length > 0
+        ) {
           envStore.applyMutations(scriptedResponse.envMutations);
         }
         set({
@@ -619,6 +732,7 @@ export const useTabStore = create<TabState>((set, get) => ({
                     headers: scriptedResponse.headers,
                     cookies: scriptedResponse.cookies,
                     body: scriptedResponse.body,
+                    bodyBase64: scriptedResponse.bodyBase64,
                     timeMs: scriptedResponse.timeMs,
                     sizeBytes: scriptedResponse.sizeBytes,
                   },
@@ -634,9 +748,18 @@ export const useTabStore = create<TabState>((set, get) => ({
         // Push script console output to global console
         const consoleFn = useConsoleStore.getState().log;
         const reqLabel = tab.name || tab.url || "Request";
-        consoleFn(reqLabel, `${scriptedResponse.status} ${scriptedResponse.statusText} (${scriptedResponse.timeMs}ms)`, "info");
+        consoleFn(
+          reqLabel,
+          `${scriptedResponse.status} ${scriptedResponse.statusText} (${scriptedResponse.timeMs}ms)`,
+          "info",
+        );
         for (const entry of scriptedResponse.consoleOutput) {
-          const level = entry.level === "error" ? "error" : entry.level === "warn" ? "warn" : "log";
+          const level =
+            entry.level === "error"
+              ? "error"
+              : entry.level === "warn"
+                ? "warn"
+                : "log";
           consoleFn(reqLabel, entry.message, level);
         }
       } else {
@@ -654,20 +777,35 @@ export const useTabStore = create<TabState>((set, get) => ({
           ),
         });
         const reqLabel = tab.name || tab.url || "Request";
-        useConsoleStore.getState().log(reqLabel, `${response.status} ${response.statusText} (${response.timeMs}ms)`, "info");
+        useConsoleStore
+          .getState()
+          .log(
+            reqLabel,
+            `${response.status} ${response.statusText} (${response.timeMs}ms)`,
+            "info",
+          );
       }
     } catch (err) {
       if (!current()) return;
       set({
         tabs: get().tabs.map((t) =>
           t.id === activeTabId
-            ? { ...t, error: typeof err === "object" && err !== null && "message" in err ? err as HttpError : { errorType: "request_error", message: String(err) }, loading: false }
+            ? {
+                ...t,
+                error:
+                  typeof err === "object" && err !== null && "message" in err
+                    ? (err as HttpError)
+                    : { errorType: "request_error", message: String(err) },
+                loading: false,
+              }
             : t,
         ),
       });
       const reqLabel = tab.name || tab.url || "Request";
       const httpErr = err as HttpError;
-      useConsoleStore.getState().log(reqLabel, httpErr?.message || String(err), "error");
+      useConsoleStore
+        .getState()
+        .log(reqLabel, httpErr?.message || String(err), "error");
     } finally {
       if (requestRuns.get(tab.id) === executionId) requestRuns.delete(tab.id);
     }
@@ -690,7 +828,9 @@ export const useTabStore = create<TabState>((set, get) => ({
       });
     } catch (err) {
       import("@/stores/toast-store").then(({ useToastStore }) =>
-        useToastStore.getState().showError(`Failed to save request: ${String(err)}`)
+        useToastStore
+          .getState()
+          .showError(`Failed to save request: ${String(err)}`),
       );
     }
   },
@@ -720,11 +860,15 @@ export const useTabStore = create<TabState>((set, get) => ({
   },
 
   hasUnsavedNewTabs: () => {
-    return get().tabs.some((t) => !t.filePath && (t.url.trim() || t.body.content.trim()));
+    return get().tabs.some(
+      (t) => !t.filePath && (t.url.trim() || t.body.content.trim()),
+    );
   },
 
   clearResponse: () => {
-    set((state) => updateActiveTab(state, () => ({ response: null, error: null })));
+    set((state) =>
+      updateActiveTab(state, () => ({ response: null, error: null })),
+    );
   },
 
   updateResponse: (tabId: string, updates: Partial<ResponseData>) => {
@@ -732,7 +876,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       tabs: state.tabs.map((t) =>
         t.id === tabId && t.response
           ? { ...t, response: { ...t.response, ...updates } }
-          : t
+          : t,
       ),
     }));
   },
@@ -800,9 +944,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       const reloaded = requestFileToTab(file, tab.filePath, tab.collectionPath);
       set((state) => ({
         tabs: state.tabs.map((t) =>
-          t.id === tabId
-            ? { ...reloaded, id: t.id, conflictState: null }
-            : t,
+          t.id === tabId ? { ...reloaded, id: t.id, conflictState: null } : t,
         ),
       }));
     } catch {
@@ -832,16 +974,18 @@ export const useTabStore = create<TabState>((set, get) => ({
       await openNewWindow();
       // Close the tab in the current window — the new window will load its own state
       get().closeTab(id);
-    } catch (err) {
+    } catch {
       import("@/stores/toast-store").then(({ useToastStore }) =>
-        useToastStore.getState().showError("Failed to open new window. Please try again.")
+        useToastStore
+          .getState()
+          .showError("Failed to open new window. Please try again."),
       );
     }
   },
 
   persistTabs: () => {
     const { tabs, activeTabId } = get();
-    // Only persist file-backed tabs (exclude ephemeral WS/SSE tabs), deduplicated
+    // Persist file-backed tabs, deduplicated by path.
     const seen = new Set<string>();
     const persistedTabs = tabs
       .filter((t) => {
@@ -850,42 +994,52 @@ export const useTabStore = create<TabState>((set, get) => ({
         seen.add(t.filePath);
         return true;
       })
-      .map((t) => ({ filePath: t.filePath!, collectionPath: t.collectionPath! }));
+      .map((t) => ({
+        filePath: t.filePath!,
+        collectionPath: t.collectionPath!,
+      }));
     const activeIndex = tabs.findIndex((t) => t.id === activeTabId);
 
     // Capture window position/size — use normal (non-maximized) geometry
     // so restoring from maximized doesn't span multiple monitors
-    const geo = cachedMaximized ? normalWindowGeometry : {
-      x: window.screenX,
-      y: window.screenY,
-      width: window.outerWidth,
-      height: window.outerHeight,
-    };
+    const geo = cachedMaximized
+      ? normalWindowGeometry
+      : {
+          x: window.screenX,
+          y: window.screenY,
+          width: window.outerWidth,
+          height: window.outerHeight,
+        };
     const windowState = {
       ...geo,
       maximized: cachedMaximized,
     };
 
     // Persist all opened collection paths (not just those with open tabs)
-    import("@/stores/collection-store").then(({ useCollectionStore }) => {
-      const collections = useCollectionStore.getState().collections
-        .filter((c) => c.type === "collection")
-        .map((c) => c.path);
+    import("@/stores/collection-store")
+      .then(({ useCollectionStore }) => {
+        const collections = useCollectionStore
+          .getState()
+          .collections.filter((c) => c.type === "collection")
+          .map((c) => c.path);
 
-      savePersistedState({
-        tabs: persistedTabs,
-        activeTabIndex: activeIndex >= 0 ? activeIndex : null,
-        windowState,
-        collections,
-      }).catch(() => { /* Tab persistence failure is non-critical */ });
-    }).catch(() => {
-      // Fallback: save without collections if store not available
-      savePersistedState({
-        tabs: persistedTabs,
-        activeTabIndex: activeIndex >= 0 ? activeIndex : null,
-        windowState,
-      }).catch(() => {});
-    });
+        savePersistedState({
+          tabs: persistedTabs,
+          activeTabIndex: activeIndex >= 0 ? activeIndex : null,
+          windowState,
+          collections,
+        }).catch(() => {
+          /* Tab persistence failure is non-critical */
+        });
+      })
+      .catch(() => {
+        // Fallback: save without collections if store not available
+        savePersistedState({
+          tabs: persistedTabs,
+          activeTabIndex: activeIndex >= 0 ? activeIndex : null,
+          windowState,
+        }).catch(() => {});
+      });
   },
 
   restoreTabs: async () => {
@@ -906,7 +1060,10 @@ export const useTabStore = create<TabState>((set, get) => ({
         if (collectionPaths.size > 0) {
           import("@/stores/collection-store").then(({ useCollectionStore }) => {
             for (const path of collectionPaths) {
-              useCollectionStore.getState().openCollection(path).catch(() => {});
+              useCollectionStore
+                .getState()
+                .openCollection(path)
+                .catch(() => {});
             }
           });
         }
@@ -947,13 +1104,20 @@ export const useTabStore = create<TabState>((set, get) => ({
       if (collectionPaths.size > 0) {
         import("@/stores/collection-store").then(({ useCollectionStore }) => {
           for (const path of collectionPaths) {
-            useCollectionStore.getState().openCollection(path).catch(() => {});
+            useCollectionStore
+              .getState()
+              .openCollection(path)
+              .catch(() => {});
           }
         });
       }
-    } catch (err) {
+    } catch {
       import("@/stores/toast-store").then(({ useToastStore }) =>
-        useToastStore.getState().showWarning("Some tabs could not be restored from your last session.")
+        useToastStore
+          .getState()
+          .showWarning(
+            "Some tabs could not be restored from your last session.",
+          ),
       );
     }
   },
@@ -961,7 +1125,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
 // Selectors
 export const useActiveTab = () => {
-  return useTabStore((state) =>
-    state.tabs.find((t) => t.id === state.activeTabId) ?? null
+  return useTabStore(
+    (state) => state.tabs.find((t) => t.id === state.activeTabId) ?? null,
   );
 };

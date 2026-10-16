@@ -59,12 +59,7 @@ export function HistoryPanel() {
   };
 
   const handleRestore = (entry: typeof entries[0]) => {
-    const { setMethod, setUrl } = useTabStore.getState();
-    useTabStore.getState().newTab();
-    setTimeout(() => {
-      setMethod(entry.method as HttpMethod);
-      setUrl(entry.url);
-    }, 0);
+    useTabStore.getState().newTab({method: entry.method as HttpMethod, url: entry.url});
   };
 
   const virtualizer = useVirtualizer({

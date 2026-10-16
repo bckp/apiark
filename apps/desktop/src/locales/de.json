@@ -41,10 +41,6 @@
     "location": "Speicherort",
     "creating": "Erstelle...",
     "exportPostman": "Als Postman exportieren",
-    "exportOpenapi": "Als OpenAPI exportieren",
-    "exportApiark": "Als ApiArk ZIP exportieren",
-    "startMockServer": "Mock-Server Starten",
-    "generateDocs": "Dokumentation Generieren",
     "requestName": "Anfragename:",
     "folderName": "Ordnername:",
     "openCollectionFirst": "Öffne zuerst eine Sammlung, um Umgebungen zu verwalten",
@@ -250,17 +246,7 @@
     "exportState": "App-Zustand Exportieren",
     "importState": "App-Zustand Importieren",
     "exporting": "Exportiere...",
-    "importing": "Importiere...",
-    "updates": "Updates",
-    "updateChannel": "Update-Kanal",
-    "stable": "Stabil",
-    "beta": "Beta",
-    "nightly": "Nightly",
-    "checkForUpdates": "Nach Updates Suchen",
-    "upToDate": "Du bist auf dem neuesten Stand",
-    "updateAvailable": "Update verfügbar: {{version}}",
-    "shortcuts": "Tastenkürzel",
-    "recording": "Drücke eine Tastenkombination..."
+    "importing": "Importiere..."
   },
   "runner": {
     "title": "Sammlungsausführer",
@@ -289,11 +275,6 @@
     "warnings": "{{count}} Warnungen",
     "source": "Quelle",
     "postman": "Postman v2.1",
-    "insomnia": "Insomnia v4",
-    "bruno": "Bruno",
-    "openapi": "OpenAPI 3.x",
-    "hoppscotch": "Hoppscotch",
-    "har": "HAR (HTTP Archive)",
     "next": "Weiter",
     "back": "Zurück",
     "done": "Fertig",
@@ -303,38 +284,7 @@
   "export": {
     "title": "Sammlung Exportieren",
     "format": "Format",
-    "postman": "Postman v2.1",
-    "openapi": "OpenAPI 3.0",
-    "apiark": "ApiArk YAML"
-  },
-  "commandPalette": {
-    "title": "Befehlspalette",
-    "placeholder": "Befehl eingeben...",
-    "noResults": "Keine Befehle gefunden",
-    "general": "Allgemein",
-    "view": "Ansicht",
-    "tabs": "Tabs",
-    "requests": "Anfragen",
-    "environments": "Umgebungen",
-    "newHttpRequest": "Neue HTTP-Anfrage",
-    "newGraphqlRequest": "Neue GraphQL-Anfrage",
-    "newWebsocket": "Neue WebSocket-Verbindung",
-    "newSse": "Neue SSE-Verbindung",
-    "newGrpc": "Neue gRPC-Anfrage",
-    "openSettings": "Einstellungen",
-    "importCurl": "cURL Importieren",
-    "importCollection": "Sammlung Importieren",
-    "compareResponses": "Antworten Vergleichen",
-    "mockServers": "Mock-Server",
-    "scheduledMonitors": "Geplante Monitore",
-    "generateDocs": "API-Dokumentation Generieren",
-    "runCollection": "Sammlung Ausführen",
-    "toggleZenMode": "Zen-Modus Umschalten",
-    "toggleTerminal": "Terminal Umschalten",
-    "toggleConsole": "Konsole Umschalten",
-    "switchTo": "Wechseln zu",
-    "navigate": "Mit Pfeiltasten navigieren",
-    "enterToSelect": "Enter zum Auswählen"
+    "postman": "Postman v2.1"
   },
   "common": {
     "save": "Speichern",
@@ -378,17 +328,6 @@
     "failedToImport": "Importieren fehlgeschlagen: {{reason}}",
     "failedToExport": "Exportieren fehlgeschlagen: {{reason}}"
   },
-  "onboarding": {
-    "welcome": "Willkommen bei ApiArk",
-    "tagline": "Lokale API-Entwicklung. Keine Konten. Keine Cloud. Nur Geschwindigkeit.",
-    "startScratch": "Von Grund auf beginnen",
-    "startScratchDesc": "Erstelle eine Beispielsammlung mit Musteranfragen",
-    "importExisting": "Bestehende Sammlung importieren",
-    "importExistingDesc": "Von Postman, Insomnia, Bruno oder OpenAPI",
-    "openFolder": "Ordner öffnen",
-    "openFolderDesc": "Öffne ein Verzeichnis mit einer bestehenden ApiArk-Sammlung",
-    "chooseTheme": "Wähle dein Design"
-  },
   "console": {
     "title": "Konsole",
     "terminal": "Terminal",
@@ -401,111 +340,10 @@
     "warn": "warn",
     "noLogs": "Keine Konsolenausgabe"
   },
-  "grpc": {
-    "title": "gRPC",
-    "loadProto": ".proto laden",
-    "service": "Dienst",
-    "method": "Methode",
-    "invoke": "Aufrufen",
-    "metadata": "Metadaten",
-    "requestBody": "Anfrage-Body (JSON)",
-    "responseBody": "Antwort",
-    "loadProtoToStart": "Lade eine .proto-Datei, um loszulegen",
-    "selectMethodToSend": "Wähle eine Methode und sende eine Anfrage"
-  },
-  "graphql": {
-    "query": "GraphQL-Abfrage",
-    "variables": "Variablen",
-    "variablesJson": "Variablen (JSON)",
-    "operationName": "Operationsname (optional)",
-    "fetchSchema": "Schema Abrufen (Introspection)",
-    "fetchingSchema": "Abrufen...",
-    "schema": "Schema",
-    "schemaTypes": "Schema-Typen"
-  },
-  "mock": {
-    "title": "Mock-Server",
-    "start": "Mock-Server Starten",
-    "stop": "Stoppen",
-    "stopServer": "Server stoppen",
-    "port": "Port",
-    "latency": "Latenz (ms)",
-    "errorRate": "Fehler %",
-    "running": "Läuft",
-    "stopped": "Gestoppt",
-    "collection": "Sammlung",
-    "starting": "Starte...",
-    "noServers": "Keine Mock-Server aktiv",
-    "endpoints": "Endpoints",
-    "endpoint": "Endpoint",
-    "requestLog": "Anfrage-Protokoll",
-    "clearLogs": "Protokolle löschen",
-    "waitingForRequests": "Warte auf Anfragen an localhost:",
-    "selectServer": "Wähle einen Server für Details",
-    "createDesc": "Erstelle lokale Mock-Server aus deinen Sammlungen",
-    "newMockServer": "Neuer Mock-Server"
-  },
-  "monitor": {
-    "title": "Monitore",
-    "create": "Monitor Erstellen",
-    "schedule": "Zeitplan",
-    "lastRun": "Letzte Ausführung",
-    "nextRun": "Nächste Ausführung",
-    "enabled": "Aktiviert",
-    "disabled": "Deaktiviert",
-    "createDesc": "Plane automatische Sammlungsausführungen",
-    "newMonitor": "Neuer Monitor"
-  },
-  "docs": {
-    "title": "API-Dokumentation",
-    "generate": "Generieren",
-    "generateDocs": "Dokumentation Generieren",
-    "preview": "Vorschau",
-    "html": "HTML",
-    "markdown": "Markdown",
-    "generating": "Dokumentation wird generiert...",
-    "generateDesc": "Dokumentation aus Sammlungen generieren"
-  },
   "diff": {
     "title": "Antwort-Diff",
     "snapshot": "Schnappschuss",
     "compare": "Vergleichen"
-  },
-  "trash": {
-    "title": "Papierkorb",
-    "restore": "Wiederherstellen",
-    "emptyTrash": "Papierkorb Leeren",
-    "deletedAt": "Gelöscht am {{date}}"
-  },
-  "migration": {
-    "title": "Sammlungsformat-Aktualisierung",
-    "newerFormat": "Neueres Sammlungsformat",
-    "message": "Diese Sammlung verwendet Format v{{old}}. Die aktuelle Version ist v{{new}}.",
-    "upgrade": "Aktualisieren",
-    "readOnly": "Schreibgeschützt Öffnen",
-    "upgradeHint": "Die Aktualisierung schreibt die Sammlungsdateien neu. Committe deine Änderungen zuerst."
-  },
-  "websocket": {
-    "connect": "Verbinden",
-    "disconnect": "Trennen",
-    "send": "Senden",
-    "connected": "Verbunden",
-    "disconnected": "Getrennt",
-    "messages": "Nachrichten",
-    "connectToStart": "Verbinde dich, um das Streaming zu starten"
-  },
-  "sse": {
-    "connect": "Verbinden",
-    "disconnect": "Trennen",
-    "events": "Ereignisse",
-    "connected": "Verbunden",
-    "disconnected": "Getrennt",
-    "connectToStart": "Verbinde dich, um das Streaming zu starten"
-  },
-  "ai": {
-    "title": "KI-Assistent",
-    "comingSoon": "AI Assistant",
-    "comingSoonDesc": "Generate API requests from natural language and auto-generate tests from responses. Configure your AI provider in Settings."
   },
   "cookies": {
     "title": "Cookie-Dose",
@@ -526,31 +364,9 @@
     "persistCookies": "Cookies Beibehalten",
     "persistCookiesDesc": "Cookies auf der Festplatte über App-Neustarts hinweg speichern"
   },
-  "tour": {
-    "skip": "Tour überspringen",
-    "back": "Zurück",
-    "next": "Weiter",
-    "getStarted": "Loslegen",
-    "of": "von",
-    "collectionsSidebar": "Sammlungs-Seitenleiste",
-    "environmentSelector": "Umgebungsauswahl",
-    "requestTabs": "Anfrage-Tabs",
-    "urlBar": "URL-Leiste",
-    "queryParameters": "Query-Parameter",
-    "requestHeaders": "Header",
-    "requestBody": "Anfrage-Body",
-    "authentication": "Authentifizierung",
-    "scripts": "Scripts",
-    "testsAssertions": "Tests & Zusicherungen",
-    "responseViewer": "Antwort-Viewer",
-    "sendFirstRequest": "Sende Deine Erste Anfrage!"
-  },
   "confirmDelete": {
     "title": "Löschen Bestätigen",
     "request": "\"{{name}}\" löschen?",
     "collection": "Sammlung \"{{name}}\" löschen? Die gesamte Sammlung wird in den Papierkorb verschoben."
-  },
-  "audit": {
-    "title": "Audit-Protokolle"
   }
 }

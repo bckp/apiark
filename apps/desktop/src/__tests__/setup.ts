@@ -18,10 +18,9 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
   writeTextFile: vi.fn().mockResolvedValue(undefined),
+  writeFile: vi.fn().mockResolvedValue(undefined),
   readTextFile: vi.fn().mockResolvedValue(""),
   copyFile: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@tauri-apps/plugin-shell", () => ({}));
-vi.mock("@tauri-apps/plugin-notification", () => ({}));
-vi.mock("@tauri-apps/plugin-updater", () => ({}));

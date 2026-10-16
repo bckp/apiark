@@ -240,6 +240,39 @@ async fn unknown_length_response_is_bounded() {
     task.abort();
 }
 
+#[tokio::test]
+async fn binary_response_preserves_exact_bytes_without_creating_temp_files() {
+    use base64::Engine;
+    let (base, task) = server(Router::new().route(
+        "/",
+        get(|| async {
+            (
+                [("content-type", "application/octet-stream")],
+                vec![0_u8, 255, 128, 10, 0],
+            )
+        }),
+    ))
+    .await;
+    let result = execute(
+        params(&base),
+        &mut HashMap::new(),
+        None,
+        &CookieJarManager::new(),
+        Scripts::default(),
+        |_| Ok(()),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        base64::engine::general_purpose::STANDARD
+            .decode(result.body_base64.unwrap())
+            .unwrap(),
+        vec![0, 255, 128, 10, 0]
+    );
+    assert!(result.temp_path.is_none());
+    task.abort();
+}
+
 #[test]
 fn infinite_scripts_and_async_tests_cannot_pass() {
     let context = || ScriptContext {

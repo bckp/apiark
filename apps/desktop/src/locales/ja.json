@@ -41,10 +41,6 @@
     "location": "場所",
     "creating": "作成中...",
     "exportPostman": "Postman として書き出す",
-    "exportOpenapi": "OpenAPI として書き出す",
-    "exportApiark": "ApiArk ZIP として書き出す",
-    "startMockServer": "Mock サーバーを起動",
-    "generateDocs": "ドキュメントを生成",
     "requestName": "リクエスト名：",
     "folderName": "フォルダ名：",
     "openCollectionFirst": "環境を管理するには、まずコレクションを開いてください",
@@ -250,17 +246,7 @@
     "exportState": "アプリの状態をエクスポート",
     "importState": "アプリの状態をインポート",
     "exporting": "エクスポート中...",
-    "importing": "インポート中...",
-    "updates": "アップデート",
-    "updateChannel": "更新チャンネル",
-    "stable": "安定版",
-    "beta": "ベータ",
-    "nightly": "Nightly",
-    "checkForUpdates": "アップデートを確認",
-    "upToDate": "最新の状態です",
-    "updateAvailable": "アップデートがあります：{{version}}",
-    "shortcuts": "キーボードショートカット",
-    "recording": "キーの組み合わせを押してください..."
+    "importing": "インポート中..."
   },
   "runner": {
     "title": "コレクションランナー",
@@ -289,11 +275,6 @@
     "warnings": "{{count}} 件の警告",
     "source": "ソース",
     "postman": "Postman v2.1",
-    "insomnia": "Insomnia v4",
-    "bruno": "Bruno",
-    "openapi": "OpenAPI 3.x",
-    "hoppscotch": "Hoppscotch",
-    "har": "HAR (HTTP Archive)",
     "next": "次へ",
     "back": "戻る",
     "done": "完了",
@@ -303,38 +284,7 @@
   "export": {
     "title": "コレクションをエクスポート",
     "format": "フォーマット",
-    "postman": "Postman v2.1",
-    "openapi": "OpenAPI 3.0",
-    "apiark": "ApiArk YAML"
-  },
-  "commandPalette": {
-    "title": "コマンドパレット",
-    "placeholder": "コマンドを入力...",
-    "noResults": "一致するコマンドがありません",
-    "general": "一般",
-    "view": "表示",
-    "tabs": "タブ",
-    "requests": "リクエスト",
-    "environments": "環境",
-    "newHttpRequest": "新しい HTTP リクエスト",
-    "newGraphqlRequest": "新しい GraphQL リクエスト",
-    "newWebsocket": "新しい WebSocket 接続",
-    "newSse": "新しい SSE 接続",
-    "newGrpc": "新しい gRPC リクエスト",
-    "openSettings": "設定",
-    "importCurl": "cURL をインポート",
-    "importCollection": "コレクションをインポート",
-    "compareResponses": "レスポンスを比較",
-    "mockServers": "Mock サーバー",
-    "scheduledMonitors": "スケジュールモニター",
-    "generateDocs": "API ドキュメントを生成",
-    "runCollection": "コレクションを実行",
-    "toggleZenMode": "Zen モードを切替",
-    "toggleTerminal": "ターミナルを切替",
-    "toggleConsole": "コンソールを切替",
-    "switchTo": "切り替え",
-    "navigate": "矢印キーで移動",
-    "enterToSelect": "Enter で選択"
+    "postman": "Postman v2.1"
   },
   "common": {
     "save": "保存",
@@ -378,17 +328,6 @@
     "failedToImport": "インポートに失敗しました：{{reason}}",
     "failedToExport": "エクスポートに失敗しました：{{reason}}"
   },
-  "onboarding": {
-    "welcome": "ApiArk へようこそ",
-    "tagline": "ローカルファーストの API 開発。アカウント不要。クラウド不要。速さだけ。",
-    "startScratch": "ゼロから始める",
-    "startScratchDesc": "サンプルリクエストを含むサンプルコレクションを作成",
-    "importExisting": "既存のコレクションをインポート",
-    "importExistingDesc": "Postman、Insomnia、Bruno、または OpenAPI から",
-    "openFolder": "フォルダを開く",
-    "openFolderDesc": "既存の ApiArk コレクションがあるディレクトリを開く",
-    "chooseTheme": "テーマを選択"
-  },
   "console": {
     "title": "コンソール",
     "terminal": "ターミナル",
@@ -401,111 +340,10 @@
     "warn": "warn",
     "noLogs": "コンソール出力なし"
   },
-  "grpc": {
-    "title": "gRPC",
-    "loadProto": ".proto を読み込む",
-    "service": "サービス",
-    "method": "メソッド",
-    "invoke": "呼び出し",
-    "metadata": "メタデータ",
-    "requestBody": "リクエストボディ (JSON)",
-    "responseBody": "レスポンス",
-    "loadProtoToStart": ".proto ファイルを読み込んで開始",
-    "selectMethodToSend": "メソッドを選択してリクエストを送信"
-  },
-  "graphql": {
-    "query": "GraphQL クエリ",
-    "variables": "変数",
-    "variablesJson": "変数 (JSON)",
-    "operationName": "オペレーション名（任意）",
-    "fetchSchema": "スキーマを取得（イントロスペクション）",
-    "fetchingSchema": "取得中...",
-    "schema": "スキーマ",
-    "schemaTypes": "スキーマタイプ"
-  },
-  "mock": {
-    "title": "Mock サーバー",
-    "start": "Mock サーバーを起動",
-    "stop": "停止",
-    "stopServer": "サーバーを停止",
-    "port": "ポート",
-    "latency": "レイテンシ (ms)",
-    "errorRate": "エラー %",
-    "running": "実行中",
-    "stopped": "停止中",
-    "collection": "コレクション",
-    "starting": "起動中...",
-    "noServers": "実行中の Mock サーバーはありません",
-    "endpoints": "エンドポイント",
-    "endpoint": "エンドポイント",
-    "requestLog": "リクエストログ",
-    "clearLogs": "ログをクリア",
-    "waitingForRequests": "localhost でリクエストを待機中：",
-    "selectServer": "サーバーを選択して詳細を表示",
-    "createDesc": "コレクションからローカル Mock サーバーを作成",
-    "newMockServer": "新しい Mock サーバー"
-  },
-  "monitor": {
-    "title": "モニター",
-    "create": "モニターを作成",
-    "schedule": "スケジュール",
-    "lastRun": "前回の実行",
-    "nextRun": "次回の実行",
-    "enabled": "有効",
-    "disabled": "無効",
-    "createDesc": "自動コレクション実行をスケジュール",
-    "newMonitor": "新しいモニター"
-  },
-  "docs": {
-    "title": "API ドキュメント",
-    "generate": "生成",
-    "generateDocs": "ドキュメントを生成",
-    "preview": "プレビュー",
-    "html": "HTML",
-    "markdown": "Markdown",
-    "generating": "ドキュメントを生成中...",
-    "generateDesc": "コレクションからドキュメントを生成"
-  },
   "diff": {
     "title": "レスポンスの差分",
     "snapshot": "スナップショット",
     "compare": "比較"
-  },
-  "trash": {
-    "title": "ゴミ箱",
-    "restore": "復元",
-    "emptyTrash": "ゴミ箱を空にする",
-    "deletedAt": "{{date}} に削除"
-  },
-  "migration": {
-    "title": "コレクション形式の更新",
-    "newerFormat": "新しいコレクション形式",
-    "message": "このコレクションは形式 v{{old}} を使用しています。現在のバージョンは v{{new}} です。",
-    "upgrade": "アップグレード",
-    "readOnly": "読み取り専用で開く",
-    "upgradeHint": "アップグレードするとコレクションファイルが書き換えられます。先に変更をコミットしてください。"
-  },
-  "websocket": {
-    "connect": "接続",
-    "disconnect": "切断",
-    "send": "送信",
-    "connected": "接続済み",
-    "disconnected": "切断済み",
-    "messages": "メッセージ",
-    "connectToStart": "接続してストリーミングを開始"
-  },
-  "sse": {
-    "connect": "接続",
-    "disconnect": "切断",
-    "events": "イベント",
-    "connected": "接続済み",
-    "disconnected": "切断済み",
-    "connectToStart": "接続してストリーミングを開始"
-  },
-  "ai": {
-    "title": "AI アシスタント",
-    "comingSoon": "AI Assistant",
-    "comingSoonDesc": "Generate API requests from natural language and auto-generate tests from responses. Configure your AI provider in Settings."
   },
   "cookies": {
     "title": "Cookie ジャー",
@@ -526,31 +364,9 @@
     "persistCookies": "Cookie を永続化",
     "persistCookiesDesc": "アプリ再起動後も Cookie をディスクに保存"
   },
-  "tour": {
-    "skip": "ツアーをスキップ",
-    "back": "戻る",
-    "next": "次へ",
-    "getStarted": "始める",
-    "of": "/",
-    "collectionsSidebar": "コレクションサイドバー",
-    "environmentSelector": "環境セレクター",
-    "requestTabs": "リクエストタブ",
-    "urlBar": "URL バー",
-    "queryParameters": "クエリパラメータ",
-    "requestHeaders": "ヘッダー",
-    "requestBody": "リクエストボディ",
-    "authentication": "認証",
-    "scripts": "スクリプト",
-    "testsAssertions": "テストとアサーション",
-    "responseViewer": "レスポンスビューアー",
-    "sendFirstRequest": "最初のリクエストを送信しましょう！"
-  },
   "confirmDelete": {
     "title": "削除の確認",
     "request": "\"{{name}}\" を削除しますか？",
     "collection": "コレクション \"{{name}}\" を削除しますか？コレクション全体がゴミ箱に移動されます。"
-  },
-  "audit": {
-    "title": "監査ログ"
   }
 }

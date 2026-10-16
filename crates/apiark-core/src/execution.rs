@@ -20,6 +20,7 @@ pub struct ScriptedResponseData {
     pub headers: Vec<KeyValuePair>,
     pub cookies: Vec<crate::models::response::CookieData>,
     pub body: String,
+    pub body_base64: Option<String>,
     pub time_ms: u64,
     pub size_bytes: u64,
 
@@ -309,6 +310,7 @@ pub async fn execute(
         headers: response.headers,
         cookies: response.cookies,
         body: response.body,
+        body_base64: response.body_base64,
         time_ms: response.time_ms,
         size_bytes: response.size_bytes,
         truncated: response.truncated,
