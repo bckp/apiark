@@ -1,8 +1,7 @@
 # Build a interní vydání
 
-Desktop je určený pouze pro macOS. CLI a `apiark-core` nemají závislost na
-Tauri. Připravená CI matice zahrnuje také Linux a Windows; hostovaný běh
-zde ještě neproběhl.
+Tento fork udržujeme pro macOS, včetně desktopu i CLI. CLI a `apiark-core`
+nemají závislost na Tauri. Níže jsou postupy pro lokální build a vydání na Macu.
 
 ## Lokální build
 
@@ -39,7 +38,7 @@ cargo build -p apiark-cli --release --locked --target-dir target/cli
 target/cli/release/apiark --help
 ```
 
-Na Windows se výsledný soubor jmenuje `apiark.exe`. macOS Intel lze sestavit
+Variantu pro macOS Intel lze sestavit
 na vhodném hostu s targetem `x86_64-apple-darwin`; zde byl sestaven pouze
 `aarch64-apple-darwin`. Univerzální desktop potřebuje oba Apple Rust targety
 a volbu Tauri `--target universal-apple-darwin`; jeho build zde neproběhl.
@@ -112,8 +111,8 @@ download velkých streamů není implementovaný.
 
 ## CI
 
-`.github/workflows/ci.yml` obsahuje macOS/Linux/Windows testy a release buildy
-CLI a macOS test/build desktopu. Artefakty jsou tar archivy, aby se zachovala
+Pro macOS jsou v `.github/workflows/ci.yml` připravené testy a release build
+CLI a test/build desktopu. Artefakty jsou tar archivy, aby se zachovala
 práva spustitelných souborů; obsahují také původní `LICENSE` s copyrightem.
 Při ruční distribuci aplikace nebo CLI přibal stejný licenční soubor.
 CI nic nepublikuje a nemá distribuční tajné údaje.
