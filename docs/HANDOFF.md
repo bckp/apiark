@@ -15,6 +15,9 @@ název, verze a přibalená MIT licence. Název zůstává `ApiArk`.
 CI i podepsaný release nyní kontrolují ID a název v Info.plist proti Tauri konfiguraci.
 Na další žádost uživatele je z názvu odstraněné `Internal`, včetně dalších
 oken, výchozí složky pro nové importy (`~/ApiArk`) a distribučních archivů.
+Import novou cílovou složku vytvoří až po úspěšném parsování kolekce;
+regresní test ověřuje první import, zachování dat při kolizi a odmítnutí
+neplatného vstupu bez vytvoření složky.
 Datová složka `~/.apiark-internal` se nemění. WebView localStorage se může
 pod novou identitou obnovit na výchozí hodnoty; jeho migrace není implementovaná.
 
@@ -95,7 +98,7 @@ Neproběhl útok proti skutečným citlivým API ani úplný audit všech funkc�
 
 ## Výsledky kontrol
 
-Finální `scripts/check.fish` skončil exit 0:
+Kompletní lokální `scripts/check.fish` z 16. 10. 2026 skončil exit 0:
 
 | Kontrola | Výsledek na tomto Macu |
 |---|---|
