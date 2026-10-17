@@ -1,4 +1,4 @@
-# Předání interního forku
+# Předání forku ApiArk
 
 Stav ověření: 17. 10. 2026, macOS arm64. Aktuální větev `codex/bundle-id`,
 výchozí commit `46ba45acdc921bcf828c61190d8143e73525fd40`.
@@ -11,8 +11,10 @@ MIT licence a původní copyright v `LICENSE` jsou beze změny.
 
 17. 10. 2026 byl na žádost uživatele změněn bundle ID na `dev.kepak.apiark`.
 Nový lokální release build macOS arm64 prošel; ověřeny byly skutečné ID,
-název, verze a přibalená MIT licence. Název zůstává `ApiArk Internal`.
-CI i podepsaný release nyní kontrolují ID v Info.plist proti Tauri konfiguraci.
+název, verze a přibalená MIT licence. Název zůstává `ApiArk`.
+CI i podepsaný release nyní kontrolují ID a název v Info.plist proti Tauri konfiguraci.
+Na další žádost uživatele je z názvu odstraněné `Internal`, včetně dalších
+oken, výchozí složky pro nové importy (`~/ApiArk`) a distribučních archivů.
 Datová složka `~/.apiark-internal` se nemění. WebView localStorage se může
 pod novou identitou obnovit na výchozí hodnoty; jeho migrace není implementovaná.
 
@@ -123,10 +125,11 @@ v této úpravě se znovu sestavuje macOS `.app` a provádějí CLI subprocess t
 
 Artefakty nejsou commitované:
 
-- `target/release/bundle/macos/ApiArk Internal.app`
+- `target/release/bundle/macos/ApiArk.app`
 - `target/cli/release/apiark`
-- `target/artifacts/ApiArk-Internal-macos-arm64.tar.gz` (aplikace + LICENSE)
-- `target/artifacts/apiark-cli-macos-arm64.tar.gz` (CLI + LICENSE)
+
+Starší archivy v `target/artifacts` pocházejí z předchozí fáze a neobsahují
+aktuální název/identitu aplikace; pro nový build používej `.app` výše nebo CI.
 
 Finální bundle má přibližně 22 MiB a CLI 7,1 MiB. Kontrola Info.plist
 potvrdila interní bundle ID. `codesign -dv` ukázal pouze linkerový ad-hoc

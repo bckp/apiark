@@ -106,10 +106,13 @@ jobs:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
         run: |
-          set -l release_app "target/$RELEASE_TARGET/release/bundle/macos/ApiArk Internal.app"
+          set -l release_app "target/$RELEASE_TARGET/release/bundle/macos/ApiArk.app"
           set -l expected_identifier (python3 -c 'import json; print(json.load(open("apps/desktop/src-tauri/tauri.conf.json"))["identifier"])'); or exit 1
           set -l bundled_identifier (/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$release_app/Contents/Info.plist"); or exit 1
           test "$bundled_identifier" = "$expected_identifier"; or exit 1
+          set -l expected_name (python3 -c 'import json; print(json.load(open("apps/desktop/src-tauri/tauri.conf.json"))["productName"])'); or exit 1
+          set -l bundled_name (/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$release_app/Contents/Info.plist"); or exit 1
+          test "$bundled_name" = "$expected_name"; or exit 1
           set -l bundled_version (/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$release_app/Contents/Info.plist")
           test "$bundled_version" = "$RELEASE_VERSION"; or exit 1
           set -l expected_arch (string replace x64 x86_64 -- "$RELEASE_ARCH")
@@ -124,7 +127,7 @@ jobs:
           test -f "$release_app/Contents/Resources/LICENSE"; or exit 1
           cmp LICENSE "$release_app/Contents/Resources/LICENSE"; or exit 1
           mkdir -p release-artifacts; or exit 1
-          ditto -c -k --keepParent "$release_app" "release-artifacts/ApiArk-Internal-$RELEASE_VERSION-macos-$RELEASE_ARCH.app.zip"; or exit 1
+          ditto -c -k --keepParent "$release_app" "release-artifacts/ApiArk-$RELEASE_VERSION-macos-$RELEASE_ARCH.app.zip"; or exit 1
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: signed-macos-${{ matrix.arch }}
@@ -168,4 +171,4 @@ jobs:
           end
           set -l release_files release-artifacts/*.app.zip
           test (count $release_files) -eq 2; or exit 1
-          gh release create "$release_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease --title "ApiArk Internal $RELEASE_VERSION" --notes 'macOS preview. Build and compatibility details are in README.md. Automatic updates are disabled.' $release_files; or exit 1
+          gh release create "$release_tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease --title "ApiArk $RELEASE_VERSION" --notes 'macOS preview. Build and compatibility details are in README.md. Automatic updates are disabled.' $release_files; or exit 1

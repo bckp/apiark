@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-config-schema/schema.json",
-  "productName": "ApiArk Internal",
+  "productName": "ApiArk",
   "version": "0.4.6",
   "identifier": "dev.kepak.apiark",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "ApiArk Internal",
+        "title": "ApiArk",
         "width": 1280,
         "height": 800,
         "minWidth": 800,

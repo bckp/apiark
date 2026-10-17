@@ -27,7 +27,7 @@ Samostatný macOS bundle bez distribučního podpisu:
 
 ```fish
 pnpm --filter @apiark/desktop tauri build --bundles app --no-sign --ci
-open 'target/release/bundle/macos/ApiArk Internal.app'
+open 'target/release/bundle/macos/ApiArk.app'
 ```
 
 CLI sestavuj do samostatného adresáře, protože desktopový i CLI binární
@@ -94,7 +94,7 @@ mezirequestový store; pro návazné requesty používej `ark.env`.
 
 ## Identita a data
 
-Bundle ID: `dev.kepak.apiark`. Název: `ApiArk Internal`.
+Bundle ID: `dev.kepak.apiark`. Název: `ApiArk`.
 Globální nastavení, historie, logy, cookie persistence a koš jsou v
 `~/.apiark-internal`. Původní `~/.apiark` se nemigruje ani nečte.
 Kolekce dál používají `.apiark/apiark.yaml` a YAML requesty; jejich umístění
@@ -108,7 +108,9 @@ Od 17. 10. 2026 je bundle ID změněné z `cz.kepakovi.apiark.internal` na
 Vlastní datová složka ani cesty ke kolekcím se nemění; migrace původního
 WebView úložiště není implementovaná. Jazyk a stav nápověd v localStorage
 se proto mohou vrátit na výchozí hodnoty. CI ověřuje skutečné bundle ID
-v sestaveném Info.plist proti konfiguraci aplikace.
+a název v sestaveném Info.plist proti konfiguraci aplikace. Aplikace se nyní
+jmenuje `ApiArk`, výstup je `ApiArk.app`. Výchozí složka pro nové importy je
+`~/ApiArk`; již uložené kolekce se nepřesouvají.
 
 Binární odpověď lze v desktopu uložit přes Save to file. Přijímání má limit
 10 MiB i bez Content-Length; soubory větší než limit se odmítnou. Bajty
@@ -166,19 +168,19 @@ S vlastní identitou v Keychainu:
 security find-identity -v -p codesigning
 set -lx APPLE_SIGNING_IDENTITY 'Developer ID Application: YOUR NAME (TEAMID)'
 pnpm --filter @apiark/desktop tauri build --bundles app --ci
-codesign --verify --deep --strict --verbose=2 'target/release/bundle/macos/ApiArk Internal.app'
+codesign --verify --deep --strict --verbose=2 'target/release/bundle/macos/ApiArk.app'
 ```
 
 Hesla a privátní klíče patří do Keychainu nebo CI secrets, nikdy do checkoutu.
 Notarizační profil můžeš uložit interaktivně, bez hesla v příkazu či historii:
 
 ```fish
-xcrun notarytool store-credentials apiark-internal-notary --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID
-ditto -c -k --keepParent 'target/release/bundle/macos/ApiArk Internal.app' /tmp/apiark-internal-notarization.zip
-xcrun notarytool submit /tmp/apiark-internal-notarization.zip --keychain-profile apiark-internal-notary --wait
-xcrun stapler staple 'target/release/bundle/macos/ApiArk Internal.app'
-xcrun stapler validate 'target/release/bundle/macos/ApiArk Internal.app'
-spctl --assess --type execute --verbose=2 'target/release/bundle/macos/ApiArk Internal.app'
+xcrun notarytool store-credentials apiark-notary --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID
+ditto -c -k --keepParent 'target/release/bundle/macos/ApiArk.app' /tmp/apiark-notarization.zip
+xcrun notarytool submit /tmp/apiark-notarization.zip --keychain-profile apiark-notary --wait
+xcrun stapler staple 'target/release/bundle/macos/ApiArk.app'
+xcrun stapler validate 'target/release/bundle/macos/ApiArk.app'
+spctl --assess --type execute --verbose=2 'target/release/bundle/macos/ApiArk.app'
 ```
 
 Před odesláním Apple musí být aplikace podepsaná identitou výše. Odesílá se

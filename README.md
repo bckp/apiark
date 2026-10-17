@@ -1,4 +1,4 @@
-# ApiArk Internal
+# ApiArk
 
 [![CI](https://github.com/bckp/apiark/actions/workflows/ci.yml/badge.svg)](https://github.com/bckp/apiark/actions/workflows/ci.yml)
 
@@ -54,11 +54,11 @@ Create a local release build without a distribution signature:
 pnpm --filter @apiark/desktop tauri build --bundles app --no-sign --ci
 ```
 
-The application is created at `target/release/bundle/macos/ApiArk Internal.app`.
+The application is created at `target/release/bundle/macos/ApiArk.app`.
 Launch it with:
 
 ```fish
-open 'target/release/bundle/macos/ApiArk Internal.app'
+open 'target/release/bundle/macos/ApiArk.app'
 ```
 
 The local build has been verified on Apple Silicon. Developer ID signing,

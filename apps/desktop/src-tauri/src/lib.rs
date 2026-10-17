@@ -129,5 +129,5 @@ pub fn run() {
             open_new_window,
         ])
         .run(tauri::generate_context!())
-        .expect("Cannot run ApiArk Internal");
+        .expect("Cannot run ApiArk");
 }
