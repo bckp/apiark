@@ -117,7 +117,7 @@ The detailed guides below are currently in Czech:
 - [Verified baseline and fork plan](docs/FORK_PLAN.md)
 - [Handoff status and remaining verification](docs/HANDOFF.md)
 
-The fork uses bundle ID `cz.kepakovi.apiark.internal` and stores application
+The fork uses bundle ID `dev.kepak.apiark` and stores application
 data in `~/.apiark-internal`. The original updater has been removed.
 Collections retain the YAML format, extended with optional Postman metadata.
 

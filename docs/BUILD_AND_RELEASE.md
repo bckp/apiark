@@ -94,7 +94,7 @@ mezirequestový store; pro návazné requesty používej `ark.env`.
 
 ## Identita a data
 
-Bundle ID: `cz.kepakovi.apiark.internal`. Název: `ApiArk Internal`.
+Bundle ID: `dev.kepak.apiark`. Název: `ApiArk Internal`.
 Globální nastavení, historie, logy, cookie persistence a koš jsou v
 `~/.apiark-internal`. Původní `~/.apiark` se nemigruje ani nečte.
 Kolekce dál používají `.apiark/apiark.yaml` a YAML requesty; jejich umístění
@@ -102,6 +102,13 @@ volí uživatel. Otevření stejné složky v obou aplikacích přirozeně sdíl
 Formát kolekce je verze 1 (chybějící `version` znamená 1). Jiné verze obě
 aplikace odmítnou bez migrace souborů. Specializované staré protokoly se
 nespouštějí jako HTTP; otevření/běh vrátí srozumitelnou chybu.
+
+Od 17. 10. 2026 je bundle ID změněné z `cz.kepakovi.apiark.internal` na
+`dev.kepak.apiark`. macOS a WebKit aplikaci považují za novou identitu.
+Vlastní datová složka ani cesty ke kolekcím se nemění; migrace původního
+WebView úložiště není implementovaná. Jazyk a stav nápověd v localStorage
+se proto mohou vrátit na výchozí hodnoty. CI ověřuje skutečné bundle ID
+v sestaveném Info.plist proti konfiguraci aplikace.
 
 Binární odpověď lze v desktopu uložit přes Save to file. Přijímání má limit
 10 MiB i bez Content-Length; soubory větší než limit se odmítnou. Bajty

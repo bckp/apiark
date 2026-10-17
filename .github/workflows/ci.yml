@@ -84,6 +84,11 @@ jobs:
       - run: pnpm --filter @apiark/desktop lint
       - run: cargo test -p apiark --lib --locked
       - run: pnpm --filter @apiark/desktop tauri build --debug --bundles app --no-sign --ci
+      - name: Verify the built bundle identity
+        run: |
+          set -l expected_identifier (python3 -c 'import json; print(json.load(open("apps/desktop/src-tauri/tauri.conf.json"))["identifier"])'); or exit 1
+          set -l bundled_identifier (/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' 'target/debug/bundle/macos/ApiArk Internal.app/Contents/Info.plist'); or exit 1
+          test "$bundled_identifier" = "$expected_identifier"; or exit 1
       - run: tar -czf ApiArk-Internal-macOS.tar.gz -C target/debug/bundle/macos "ApiArk Internal.app" -C "${{ github.workspace }}" LICENSE
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

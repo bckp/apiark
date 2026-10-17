@@ -1,6 +1,6 @@
 # Předání interního forku
 
-Stav ověření: 16. 10. 2026, macOS arm64. Aktuální větev `codex/github-ci`,
+Stav ověření: 17. 10. 2026, macOS arm64. Aktuální větev `codex/bundle-id`,
 výchozí commit `46ba45acdc921bcf828c61190d8143e73525fd40`.
 Origin je `https://code.kepakovi.cz/bckp/apiark.git`; původní GitHub zůstává
 jako `upstream`. Remote `github` je `git@github.com:bckp/apiark.git`.
@@ -8,6 +8,13 @@ Po výslovném schválení uživatelem byl fork pushnut do veřejného GitHub ma
 První CI běh: https://github.com/bckp/apiark/actions/runs/38955818690
 Distribuční release zveřejněný není.
 MIT licence a původní copyright v `LICENSE` jsou beze změny.
+
+17. 10. 2026 byl na žádost uživatele změněn bundle ID na `dev.kepak.apiark`.
+Nový lokální release build macOS arm64 prošel; ověřeny byly skutečné ID,
+název, verze a přibalená MIT licence. Název zůstává `ApiArk Internal`.
+CI i podepsaný release nyní kontrolují ID v Info.plist proti Tauri konfiguraci.
+Datová složka `~/.apiark-internal` se nemění. WebView localStorage se může
+pod novou identitou obnovit na výchozí hodnoty; jeho migrace není implementovaná.
 
 Navazující úprava po kontrole `cemhun/apiark` přidává bezpečnou obnovu relace,
 ErrorBoundary panelů a našeptávání názvů proměnných bez hodnot v URL,
@@ -47,7 +54,7 @@ v [reportu z 16. 10. 2026](FORK_REVIEW_2026-10-16.txt).
 - Binární odpovědi do 10 MiB lze explicitně uložit bez dočasných souborů.
   Dialog drží původní odpověď i při přepnutí záložky nebo novém requestu.
 - Globální data jsou v `~/.apiark-internal`, bundle ID je
-  `cz.kepakovi.apiark.internal`. Původní globální data se nečtou ani nemigrují.
+  `dev.kepak.apiark`. Původní globální data se nečtou ani nemigrují.
   Updater včetně původního endpointu, klíče a oprávnění je odstraněný.
 - Overlay titlebar se skrytým titulkem a nativními tlačítky je nakonfigurovaný
   pro hlavní i další okna. Toolbar má 52 logických pixelů, zleva rezervu 106;

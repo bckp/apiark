@@ -107,6 +107,9 @@ jobs:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
         run: |
           set -l release_app "target/$RELEASE_TARGET/release/bundle/macos/ApiArk Internal.app"
+          set -l expected_identifier (python3 -c 'import json; print(json.load(open("apps/desktop/src-tauri/tauri.conf.json"))["identifier"])'); or exit 1
+          set -l bundled_identifier (/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$release_app/Contents/Info.plist"); or exit 1
+          test "$bundled_identifier" = "$expected_identifier"; or exit 1
           set -l bundled_version (/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$release_app/Contents/Info.plist")
           test "$bundled_version" = "$RELEASE_VERSION"; or exit 1
           set -l expected_arch (string replace x64 x86_64 -- "$RELEASE_ARCH")
