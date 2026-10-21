@@ -6,6 +6,14 @@ A maintenance fork of ApiArk for personal use on **macOS**.
 The desktop application and CLI share the `apiark-core` Rust library,
 collection format, and execution of HTTP requests, scripts, and tests.
 
+## Download for macOS
+
+Download the DMG from [GitHub Releases](https://github.com/bckp/apiark/releases/latest).
+Version 0.4.7 provides one universal application for Apple Silicon and Intel Macs.
+The release uses Developer ID signing and Apple notarization.
+Open the DMG, then drag `ApiArk.app` to Applications.
+Automatic updates are disabled. Download future releases from the same page.
+
 ## Features
 
 - A macOS desktop application built with Tauri 2 and React.
@@ -61,12 +69,12 @@ Launch it with:
 open 'target/release/bundle/macos/ApiArk.app'
 ```
 
-The local build has been verified on Apple Silicon. Developer ID signing,
-notarization, and other macOS build variants are covered in the
+Developer ID signing, notarization, and universal builds are covered in the
 [build and release guide](docs/BUILD_AND_RELEASE.md).
 A [manually triggered GitHub workflow](docs/BUILD_AND_RELEASE.md#podepsaný-build-na-githubu)
 is available for signed Apple Silicon and Intel builds, with an optional
-draft release. Its first signed run still requires distribution secrets.
+draft release. It produces notarized DMG images and application ZIP archives.
+The hosted workflow still requires distribution secrets. Local releases use the macOS Keychain.
 
 For development with automatic reloading:
 

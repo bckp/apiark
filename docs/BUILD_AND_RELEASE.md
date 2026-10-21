@@ -38,10 +38,10 @@ cargo build -p apiark-cli --release --locked --target-dir target/cli
 target/cli/release/apiark --help
 ```
 
-Variantu pro macOS Intel lze sestavit
-na vhodném hostu s targetem `x86_64-apple-darwin`; zde byl sestaven pouze
-`aarch64-apple-darwin`. Univerzální desktop potřebuje oba Apple Rust targety
-a volbu Tauri `--target universal-apple-darwin`; jeho build zde neproběhl.
+Variantu pro macOS Intel lze sestavit na vhodném hostu s targetem
+`x86_64-apple-darwin`. Univerzální desktop potřebuje oba Apple Rust targety
+a volbu Tauri `--target universal-apple-darwin`. Postup podpisu univerzálního
+vydání je v [release návodu](MACOS_RELEASE.md).
 
 ## CLI
 
@@ -156,104 +156,15 @@ na všech runnerech ani o ověření distribučního podpisu.
 
 ## Podpis a notarizace
 
-Nová lokální kontrola 16. 10. 2026 našla platnou **Developer ID Application**
-identitu a `notarytool` je dostupný. Přístup k notarizační službě dosud
-ověřený není. Distribuční podpis ani notarizace tohoto forku neproběhly. Bundle sestavený
-s `--no-sign` má pouze ad-hoc podpis samotného Mach-O od linkeru, bez Team ID
-a bez podepsaných resources. To není Developer ID podpis aplikace.
-
-S vlastní identitou v Keychainu:
-
-```fish
-security find-identity -v -p codesigning
-set -lx APPLE_SIGNING_IDENTITY 'Developer ID Application: YOUR NAME (TEAMID)'
-pnpm --filter @apiark/desktop tauri build --bundles app --ci
-codesign --verify --deep --strict --verbose=2 'target/release/bundle/macos/ApiArk.app'
-```
-
-Hesla a privátní klíče patří do Keychainu nebo CI secrets, nikdy do checkoutu.
-Notarizační profil můžeš uložit interaktivně, bez hesla v příkazu či historii:
-
-```fish
-xcrun notarytool store-credentials apiark-notary --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID
-ditto -c -k --keepParent 'target/release/bundle/macos/ApiArk.app' /tmp/apiark-notarization.zip
-xcrun notarytool submit /tmp/apiark-notarization.zip --keychain-profile apiark-notary --wait
-xcrun stapler staple 'target/release/bundle/macos/ApiArk.app'
-xcrun stapler validate 'target/release/bundle/macos/ApiArk.app'
-spctl --assess --type execute --verbose=2 'target/release/bundle/macos/ApiArk.app'
-```
-
-Před odesláním Apple musí být aplikace podepsaná identitou výše. Odesílá se
-vlastní build, nikoli kolekce, historie nebo data uživatele. Pro DMG build
-použij Tauri `--bundles dmg` s vlastním podpisem a stejným ověřením výsledku.
-
-macOS podpis/notarizace používá Apple Developer ID. Podpis updater artefaktů
-Tauri je samostatný mechanismus s jiným klíčem. Updater je v tomto forku
-vypnutý a jeho původní endpoint, veřejný klíč, plugin a oprávnění odstraněné.
-Před případným návratem updateru je třeba vlastní endpoint, vlastní updater
-klíč a ověření aktualizace na testovací instalaci.
-
-Postup vychází z [oficiální dokumentace Tauri](https://v2.tauri.app/distribute/sign/macos/).
+Aktuální postup pro podpis, notarizaci aplikace i DMG a publikování je v
+[anglickém návodu pro macOS release](MACOS_RELEASE.md). Lokální vydání používá
+Keychain bez exportu privátního klíče. Univerzální aplikace obsahuje Apple
+Silicon i Intel.
 
 ## Podepsaný build na GitHubu
 
-`.github/workflows/macos-release.yml` obsahuje ručně spouštěný workflow
-**Signed macOS preview**. Přijímá pouze výchozí větev repozitáře, nepouští
-podpis při pull requestu a běží na nativních runnerech pro Apple Silicon
-(`macos-15`) a Intel (`macos-15-intel`). Běžné CLI buildy dál zajišťuje CI;
-tento release workflow distribuuje desktopovou aplikaci.
-
-Environment `macos-release` už je založený a omezený na větev `main`.
-Veřejné údaje `APPLE_SIGNING_IDENTITY` a `APPLE_TEAM_ID` jsou nastavené.
-V [nastavení prostředí](https://github.com/bckp/apiark/settings/environments)
-je případně možné přidat schválení vydání. Ještě je potřeba nastavit tyto **Secrets**:
-
-| Secret | Obsah |
-|---|---|
-| `APPLE_CERTIFICATE` | Base64 exportu vlastní Developer ID Application identity včetně privátního klíče do heslem chráněného `.p12` |
-| `APPLE_CERTIFICATE_PASSWORD` | Heslo tohoto exportu |
-| `APPLE_ID` | Účet pro notarizaci |
-| `APPLE_PASSWORD` | App-specific password pro notarizaci; nepoužívej běžné heslo účtu |
-
-A tyto environment **Variables**:
-
-| Variable | Obsah |
-|---|---|
-| `APPLE_SIGNING_IDENTITY` | Přesný název vlastní `Developer ID Application: …` identity |
-| `APPLE_TEAM_ID` | Team ID odpovídající distribučnímu certifikátu a notarizačnímu účtu |
-
-Base64 pouze převádí export do textu, není to šifrování. Export klíče,
-uložení Secrets a první notarizační přihlášení nebyly v této práci provedené.
-Tauri Action importuje certifikát na dočasném GitHub runneru; konfigurace
-nevyžaduje přístup k lokálnímu Macu během buildu.
-
-Workflow vyžaduje úspěšný `CI required` pro přesně tentýž commit a znovu
-provede `scripts/check.fish`. Potom oficiální Tauri Action
-sestaví a podepíše `.app` a předá ji notarizaci. Navazující kontrola vyžaduje
-platné sealed resources, Developer ID Application autoritu, očekávané Team ID,
-hardened runtime, přiložený notarizační ticket a úspěšný Gatekeeper assessment.
-Ověřuje také skutečnou verzi a architekturu aplikace oproti názvu artefaktu.
-Nepodepsaná nebo pouze ad-hoc podepsaná aplikace nemůže projít jako vydání.
-MIT licence je přibalená přímo do `Contents/Resources/LICENSE` před podpisem.
-
-Výstupem jsou dva ZIP artefakty s podepsanou a staplovanou aplikací,
-pro `arm64` a `x64`. Updater zůstává vypnutý, updater klíč není potřeba.
-Při ponechání `create_draft = false` vzniknou pouze artefakty běhu.
-Volba `true` po úspěchu obou architektur vytvoří **draft prerelease**;
-veřejné publikování draftu je samostatný ruční krok.
-
-Tag se odvozuje z `tauri.conf.json` jako `vVERSION`. Před prvním veřejným
-vydáním zvol verzi forku a aktualizuj také `apps/desktop/src-tauri/Cargo.toml`
-a workspace `Cargo.lock`. Původní `v0.4.6` může již ukazovat na upstream;
-workflow odmítne založit release, pokud tag ukazuje na jiný commit.
-Existující release se nepřepisuje.
-
-Příprava workflow byla ověřená pomocí actionlint, parsováním YAML a kontrolou
-Fish syntaxe. Kontrola přesného CI commitu byla ověřená přes skutečné GitHub
-API; ochrana release tagů také pěti syntetickými scénáři s mockovaným `gh`
-(nový tag, shodný tag, kolize, chyba API a chyba vytvoření releasu).
-Podpis, notarizace a draft release musí ještě projít prvním skutečným
-hostovaným během po nastavení Secrets. Buildy bez distribučního podpisu
-na obou GitHub Mac runnerech již prošly v běžné CI.
-
-Použité runner labels odpovídají [dokumentaci GitHubu](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+Ručně spouštěný workflow `Signed macOS release` připravuje podepsané
+a notarizované aplikace i DMG na dvou nativních Mac runnerech. Volitelně
+založí draft releasu. Veřejné publikování je samostatný krok. Hosted podpis
+stále vyžaduje distribuční Secrets v prostředí `macos-release`. Podrobnosti
+a rozdíl oproti lokálnímu vydání popisuje [návod](MACOS_RELEASE.md#build-on-github).
